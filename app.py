@@ -1130,8 +1130,9 @@ catVals.forEach(function(c){ catBar.appendChild(mkCp(c, c)); });
 function avHtml(p, size) {
   var src = AVATARS[p] || '';
   var name = NAMES[p] || p;
-  if (src) return '<img src="' + src + '" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'' + name[0] + '\'">';
-  return name[0] || '?';
+  var ini = name[0] || '?';
+  if (src) return '<img src="' + src + '" alt="" loading="lazy" onerror="this.parentElement.textContent=' + "'" + ini + "'" + '">';
+  return ini;
 }
 
 /* ── profiles ── */
@@ -1371,7 +1372,7 @@ function playAt(i) {
   if (el) { el.classList.add('cur','playing'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 
   pf.style.transition = 'none'; pf.style.width = '0%';
-  bPause.innerHTML = '⏸';
+  bPause.textContent = 'II';
   // counter supprimé
 
   var pname = NAMES[s.profile] || s.profile || '';
@@ -1426,9 +1427,9 @@ mv.addEventListener('ended', function(){
 });
 mv.addEventListener('play', function(){
   var el = document.getElementById('si-'+qi); if(el) el.classList.add('playing');
-  bPause.innerHTML = '⏸';
+  bPause.textContent = 'II';
 });
-mv.addEventListener('pause', function(){ bPause.innerHTML = '▶'; });
+mv.addEventListener('pause', function(){ bPause.textContent = '>'; });
 
 pbar.onclick = function(e){
   if (queue[qi]&&queue[qi].type===1&&mv.duration) {
@@ -1444,8 +1445,8 @@ bPause.onclick = function(){
 /* ── fullscreen ── */
 function isFS(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
 function updFS(){
-  bFS.textContent = isFS() ? '×' : '⛶';
-  bFS.title = isFS() ? 'Quitter' : 'Plein écran';
+  bFS.textContent = isFS() ? 'X' : '[]';
+  bFS.title = isFS() ? 'Quitter' : 'Plein ecran';
 }
 document.addEventListener('fullscreenchange', updFS);
 document.addEventListener('webkitfullscreenchange', updFS);
@@ -1757,7 +1758,7 @@ function setNoResume(profile, val) {
 }
 
 function showResumeModal(profile, sess) {
-  // Si "ne plus afficher" coché pour ce profil → ne rien montrer
+  // Si no-resume pour ce profil -> ne rien montrer
   if (isNoResume(profile)) { clearSessionForProfile(profile); return; }
 
   var overlay = document.createElement('div');
@@ -2023,10 +2024,10 @@ buildProfiles = function() {
     var dx = e.changedTouches[0].clientX - sx;
     var dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
-      // swipe horizontal → changer snap
+      // swipe horizontal -> changer snap
       if (dx < 0) navNext(); else navPrev();
     } else if (!moved) {
-      // tap simple → pause/play
+      // tap simple -> pause/play
       if (mv.style.display !== 'none') {
         mv.paused ? mv.play().catch(function(){}) : mv.pause();
       }
@@ -2136,8 +2137,8 @@ buildProfiles = function() {
         "<div class='tap-center' id='tap-center'></div>"
         ""
         "<div class='snap-bot'>"
-        "<button class='s-btn' id='btn-pause'>⏸</button>"
-        "<button class='s-btn' id='btn-fs'>&#9974;</button>"
+        "<button class='s-btn' id='btn-pause'>II</button>"
+        "<button class='s-btn' id='btn-fs'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><polyline points='15 3 21 3 21 9'/><polyline points='9 21 3 21 3 15'/><line x1='21' y1='3' x2='14' y2='10'/><line x1='3' y1='21' x2='10' y2='14'/></svg></button>"
         "<div class='vol-grp'>"
         "<span class='vol-ic' id='vol-ico'>&#128266;</span>"
         "<input type='range' class='vol-r' id='vol' min='0' max='100' value='80'>"

@@ -875,7 +875,136 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
 .wb-chk-label{display:flex;align-items:center;gap:7px;font-size:.63rem;color:var(--fg3);cursor:pointer;user-select:none}
 .wb-chk-label input[type=checkbox]{accent-color:var(--hi);width:13px;height:13px;cursor:pointer}
 
-@media(max-width:768px){.panel{display:none}.snap-col{display:none}.viewer{height:100vh}.snap-stage{height:100vh;aspect-ratio:unset;width:100%}}
+/* ═══════════════════════════════════════
+   MOBILE — layout complet
+   ═══════════════════════════════════════ */
+@media(max-width:768px){
+  /* Cacher les colonnes desktop */
+  .panel{display:none!important}
+  .snap-col{display:none!important}
+  .arr{display:none!important}
+
+  /* Shell = colonne plein écran */
+  .shell{flex-direction:column;height:100vh;overflow:hidden}
+
+  /* Viewer prend tout sauf la nav du bas */
+  .viewer{flex:1;height:calc(100vh - 56px);overflow:hidden}
+  .snap-stage{height:100%;aspect-ratio:unset;width:100%;border-radius:0}
+
+  /* Contrôles toujours visibles sur mobile */
+  .snap-bot{opacity:1!important}
+  .autoplay-tog{opacity:1!important;bottom:10px}
+  .tap-zone{display:block;position:absolute;top:0;bottom:0;width:38%;z-index:10;cursor:pointer;background:transparent}
+  #tap-prev{left:0}
+  #tap-next{right:0}
+
+  /* Barre de navigation en bas */
+  .mob-nav{
+    display:flex!important;
+    height:56px;flex-shrink:0;
+    background:var(--ink2);
+    border-top:1px solid var(--border);
+    z-index:200;
+  }
+  .mob-tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;cursor:pointer;color:var(--fg3);font-size:.48rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.06em;transition:color .12s;
+    position:relative;
+  }
+  .mob-tab.on{color:var(--hi)}
+  .mob-tab-icon{font-size:1.1rem;line-height:1}
+  .mob-badge{
+    position:absolute;top:6px;right:calc(50% - 14px);
+    min-width:14px;height:14px;border-radius:99px;
+    background:var(--red);color:#fff;font-size:.45rem;font-weight:800;
+    display:none;align-items:center;justify-content:center;padding:0 3px;
+  }
+
+  /* Drawer profils mobile */
+  .mob-drawer{
+    position:fixed;inset:0;z-index:300;
+    background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;
+  }
+  .mob-drawer.open{display:flex}
+  .mob-sheet{
+    width:100%;max-height:80vh;
+    background:var(--ink2);border-radius:18px 18px 0 0;
+    border-top:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .mob-sheet-handle{
+    width:36px;height:4px;border-radius:99px;
+    background:var(--border2);margin:10px auto 6px;flex-shrink:0;
+  }
+  .mob-sheet-title{
+    font-size:.8rem;font-weight:800;padding:4px 16px 10px;
+    flex-shrink:0;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .mob-sheet-close{
+    font-size:1.1rem;color:var(--fg3);cursor:pointer;
+    background:none;border:none;padding:0;line-height:1;
+  }
+  .mob-sheet-body{overflow-y:auto;flex:1;padding:6px 0 16px}
+
+  /* Snap list mobile (drawer snaps) */
+  .mob-snap-drawer{
+    position:fixed;inset:0;z-index:300;
+    background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;
+  }
+  .mob-snap-drawer.open{display:flex}
+  .mob-snap-sheet{
+    width:100%;max-height:75vh;
+    background:var(--ink2);border-radius:18px 18px 0 0;
+    border-top:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .mob-snaps-scroll{overflow-y:auto;flex:1}
+
+  /* Cards profils dans le drawer */
+  .mob-pi{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.04);
+    cursor:pointer;
+  }
+  .mob-pi.on{background:rgba(86,207,255,.06)}
+  .mob-pi .av{width:40px;height:40px;font-size:.9rem}
+  .mob-pi-info{flex:1;min-width:0}
+  .mob-pi-name{font-size:.88rem;font-weight:700}
+  .mob-pi.on .mob-pi-name{color:var(--hi)}
+  .mob-pi-sub{font-size:.6rem;color:var(--fg3);margin-top:1px;font-family:"Fira Code",monospace}
+  .mob-pi-badge{min-width:18px;height:18px;border-radius:99px;background:var(--red);color:#fff;font-size:.52rem;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 4px}
+
+  /* Filtres mobile dans le snap drawer */
+  .mob-filters{
+    display:flex;gap:5px;padding:8px 12px;
+    border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;
+  }
+  .mob-filters::-webkit-scrollbar{display:none}
+  .mob-sort-row{
+    display:flex;gap:5px;padding:5px 12px 6px;
+    border-bottom:1px solid var(--border);flex-shrink:0;
+    align-items:center;
+  }
+  .mob-sort-lbl{font-size:.52rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.07em}
+
+  /* Toast mobile */
+  #toasts{top:auto;bottom:70px;right:10px;left:10px;align-items:center}
+  .toast{min-width:0;width:100%;max-width:100%}
+
+  /* Viewer top overlay plus compact */
+  .snap-top{padding:10px 10px 8px}
+  .snap-name{font-size:.78rem}
+  .snap-time{font-size:.54rem}
+}
+@media(min-width:769px){
+  .mob-nav{display:none}
+  .mob-drawer{display:none!important}
+  .mob-snap-drawer{display:none!important}
+}
 """
 
     # ── JS ───────────────────────────────────────────────────────────────
@@ -1671,6 +1800,169 @@ buildTodayExclPanel();
 // Aucun profil sélectionné au démarrage
 
 setTimeout(fetchLiveData, 5000);
+
+/* ══════════════════════════════════════════════
+   MOBILE NAV
+   ══════════════════════════════════════════════ */
+var isMobile = function(){ return window.innerWidth <= 768; };
+
+/* Snap list mobile = miroir de #snap-list */
+var slOrig = document.getElementById('snap-list');
+var slMob  = document.getElementById('mob-snap-list');
+
+/* Override buildSnapList pour alimenter aussi la liste mobile */
+var _origBuildSnapList = buildSnapList;
+buildSnapList = function(snaps, showWho) {
+  _origBuildSnapList(snaps, showWho);
+  if (slMob) {
+    slMob.innerHTML = slOrig.innerHTML;
+    // Rebind les clics sur les items mobiles
+    slMob.querySelectorAll('.si').forEach(function(el, i) {
+      el.onclick = function() {
+        playAt(i);
+        mobCloseSnaps();
+      };
+    });
+  }
+};
+
+/* Override playAt pour sync le highlight mobile */
+var _origPlayAt2 = playAt;
+playAt = function(i) {
+  _origPlayAt2(i);
+  // Sync highlight dans la liste mobile
+  if (slMob) {
+    slMob.querySelectorAll('.si').forEach(function(el){ el.classList.remove('cur','playing'); });
+    var el = slMob.querySelector('#si-' + i);
+    if (el) { el.classList.add('cur'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  }
+  if (isMobile()) mobTabHome();
+};
+
+function mobBuildProfs() {
+  var cont = document.getElementById('mob-prof-list');
+  if (!cont) return;
+  cont.innerHTML = '';
+  PROFS.forEach(function(p) {
+    var snaps = ALL[p] || [];
+    var el = document.createElement('div');
+    el.className = 'mob-pi' + (p === curProf ? ' on' : '');
+    el.innerHTML =
+      '<div class="av">' + avHtml(p) + '</div>' +
+      '<div class="mob-pi-info">' +
+        '<div class="mob-pi-name">' + (NAMES[p]||p) + '</div>' +
+        '<div class="mob-pi-sub">' + snaps.length + ' snaps · ' + (CATS[p]||'') + '</div>' +
+      '</div>' +
+      '<div class="mob-pi-badge" style="display:' + (newCnts[p]>0?'flex':'none') + '">' + (newCnts[p]||0) + '</div>';
+    el.onclick = function() {
+      selProf(p);
+      mobCloseProfs();
+      // Ouvrir le drawer snaps après
+      setTimeout(function(){ mobTabSnaps(); }, 120);
+    };
+    cont.appendChild(el);
+  });
+}
+
+function mobUpdateBadge() {
+  var total = Object.values(newCnts).reduce(function(a,b){return a+b;},0);
+  var b = document.getElementById('mob-badge-profs');
+  if (b) {
+    b.textContent = total;
+    b.style.display = total > 0 ? 'flex' : 'none';
+  }
+}
+
+function mobSetActiveTab(id) {
+  document.querySelectorAll('.mob-tab').forEach(function(t){ t.classList.remove('on'); });
+  var el = document.getElementById(id);
+  if (el) el.classList.add('on');
+}
+
+function mobTabHome() {
+  mobSetActiveTab('mob-tab-home');
+  document.getElementById('mob-drawer-profs').classList.remove('open');
+  document.getElementById('mob-drawer-snaps').classList.remove('open');
+}
+
+function mobTabProfs() {
+  mobSetActiveTab('mob-tab-profs');
+  mobBuildProfs();
+  document.getElementById('mob-drawer-snaps').classList.remove('open');
+  document.getElementById('mob-drawer-profs').classList.add('open');
+}
+
+function mobTabSnaps() {
+  if (!curProf) { mobTabProfs(); return; }
+  mobSetActiveTab('mob-tab-snaps');
+  // Sync titre
+  var t = document.getElementById('mob-snaps-title');
+  if (t) t.textContent = (NAMES[curProf]||curProf) + ' — ' + (ALL[curProf]||[]).length + ' snaps';
+  // Sync liste
+  if (slMob) {
+    slMob.innerHTML = slOrig.innerHTML;
+    slMob.querySelectorAll('.si').forEach(function(el, i) {
+      el.onclick = function() { playAt(i); mobCloseSnaps(); };
+    });
+  }
+  document.getElementById('mob-drawer-profs').classList.remove('open');
+  document.getElementById('mob-drawer-snaps').classList.add('open');
+}
+
+function mobTabLB() {
+  mobSetActiveTab('mob-tab-lb');
+  document.getElementById('mob-drawer-profs').classList.remove('open');
+  document.getElementById('mob-drawer-snaps').classList.remove('open');
+  // Réutiliser le LB desktop dans une alerte simple ? Non : ouvrir le drawer profils en mode LB
+  mobBuildProfs();
+  document.getElementById('mob-drawer-profs').classList.add('open');
+}
+
+function mobCloseProfs() {
+  document.getElementById('mob-drawer-profs').classList.remove('open');
+  mobSetActiveTab('mob-tab-home');
+}
+
+function mobCloseSnaps() {
+  document.getElementById('mob-drawer-snaps').classList.remove('open');
+  mobSetActiveTab('mob-tab-home');
+}
+
+function mobCloseDrawer(e, el) {
+  if (e.target === el) {
+    el.classList.remove('open');
+    mobSetActiveTab('mob-tab-home');
+  }
+}
+
+/* Patch buildProfiles pour aussi rebuild la version mobile */
+var _origBuildProfiles = buildProfiles;
+buildProfiles = function() {
+  _origBuildProfiles();
+  mobUpdateBadge();
+  // Si le drawer est ouvert on le rebuild
+  if (document.getElementById('mob-drawer-profs').classList.contains('open')) {
+    mobBuildProfs();
+  }
+};
+
+/* Swipe horizontal sur le viewer pour changer de snap */
+(function(){
+  var sx = null;
+  var stage = document.getElementById('snap-stage');
+  if (!stage) return;
+  stage.addEventListener('touchstart', function(e){
+    sx = e.touches[0].clientX;
+  }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    if (sx === null) return;
+    var dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 40) {
+      if (dx < 0) navNext(); else navPrev();
+    }
+    sx = null;
+  }, {passive:true});
+})();
 """
 
     js_final = (js
@@ -1816,6 +2108,52 @@ setTimeout(fetchLiveData, 5000);
         "</div>\n"
 
         "<div id='toasts'></div>"
+
+        # ── MOBILE NAV ──
+        "<nav class='mob-nav'>"
+        "<div class='mob-tab on' id='mob-tab-home' onclick='mobTabHome()'>"
+        "<span class='mob-tab-icon'>&#127909;</span>Viewer</div>"
+        "<div class='mob-tab' id='mob-tab-profs' onclick='mobTabProfs()'>"
+        "<span class='mob-tab-icon'>&#128101;</span>"
+        "<span class='mob-badge' id='mob-badge-profs'>0</span>Profils</div>"
+        "<div class='mob-tab' id='mob-tab-snaps' onclick='mobTabSnaps()'>"
+        "<span class='mob-tab-icon'>&#9654;</span>Snaps</div>"
+        "<div class='mob-tab' id='mob-tab-lb' onclick='mobTabLB()'>"
+        "<span class='mob-tab-icon'>&#127942;</span>Top</div>"
+        "</nav>"
+
+        # ── MOBILE PROFILS DRAWER ──
+        "<div class='mob-drawer' id='mob-drawer-profs' onclick='mobCloseDrawer(event,this)'>"
+        "<div class='mob-sheet'>"
+        "<div class='mob-sheet-handle'></div>"
+        "<div class='mob-sheet-title'>"
+        "<span>Profils</span>"
+        "<button class='mob-sheet-close' onclick='mobCloseProfs()'>&#10005;</button>"
+        "</div>"
+        "<div class='mob-sheet-body' id='mob-prof-list'></div>"
+        "</div></div>"
+
+        # ── MOBILE SNAPS DRAWER ──
+        "<div class='mob-snap-drawer' id='mob-drawer-snaps' onclick='mobCloseDrawer(event,this)'>"
+        "<div class='mob-snap-sheet'>"
+        "<div class='mob-sheet-handle'></div>"
+        "<div class='mob-sheet-title'>"
+        "<span id='mob-snaps-title'>Snaps</span>"
+        "<button class='mob-sheet-close' onclick='mobCloseSnaps()'>&#10005;</button>"
+        "</div>"
+        "<div class='mob-filters'>"
+        "<button class='sf on' onclick='setFilt(&quot;all&quot;,this)'>Tous</button>"
+        "<button class='sf' onclick='setFilt(&quot;v&quot;,this)'>Vidéos</button>"
+        "<button class='sf' onclick='setFilt(&quot;i&quot;,this)'>Images</button>"
+        "<button class='sf' onclick='setFilt(&quot;new&quot;,this)'>Nouveaux</button>"
+        "</div>"
+        "<div class='mob-sort-row'>"
+        "<span class='mob-sort-lbl'>Ordre</span>"
+        "<button class='sb on' id='mob-sort-asc' onclick='setSort(&quot;chrono&quot;,this)'>&#8593; Ancien</button>"
+        "<button class='sb' id='mob-sort-desc' onclick='setSort(&quot;recent&quot;,this)'>&#8595; Récent</button>"
+        "</div>"
+        "<div class='mob-snaps-scroll' id='mob-snap-list'></div>"
+        "</div></div>"
         "<script>\n" + js_final + "\n</script>"
         "\n</body>\n</html>"
     )

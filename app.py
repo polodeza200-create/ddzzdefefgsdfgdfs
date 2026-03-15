@@ -1,12 +1,3 @@
-"""
-SNAPCHAT MULTI-PROFILE MONITOR & VIEWER v4
-- Fix tri par récent (sort stable par ts_unix)
-- Heure française (Europe/Paris) dans l'affichage
-- Avatar auto-détecté depuis HTML (pattern _RS126,126)
-- Viewer auto-refresh toutes les 15s sans recharger la page
-- Historique avec preview + clic pour jouer
-"""
-
 import urllib.request
 import urllib.error
 import json

@@ -1885,8 +1885,8 @@ function mobBuildProfs() {
   todayEl.className = 'mob-pi' + (qMode==='today' ? ' on' : '');
   var todayCnt = getToday().length;
   todayEl.innerHTML =
-    '<div class="av" style="background:rgba(86,207,255,.12);border-color:rgba(86,207,255,.3)"><svg viewBox='0 0 24 24' fill='none' stroke='var(--hi)' stroke-width='2' stroke-linecap='round'><rect x='3' y='4' width='18' height='18' rx='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/></svg></div>' +
-    '<div class="mob-pi-info"><div class="mob-pi-name" style="color:var(--hi)">Today</div><div class="mob-pi-sub">' + todayCnt + ' snaps aujourd'hui</div></div>';
+    "<div class=\"av\" style=\"background:rgba(86,207,255,.12);border-color:rgba(86,207,255,.3)\">&#x1F4C5;</div>" +
+    "<div class=\"mob-pi-info\"><div class=\"mob-pi-name\" style=\"color:var(--hi)\">Today</div><div class=\"mob-pi-sub\">" + todayCnt + " snaps</div></div>";
   todayEl.onclick = function() {
     todayMode();
     mobCloseProfs();

@@ -870,105 +870,113 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
    MOBILE
    ═══════════════════════════════════ */
 
-/* Par défaut : nav cachée */
 .mob-nav{display:none}
-.mob-drawer{display:none}
-.mob-snap-drawer{display:none}
+.mob-drawer,.mob-snap-drawer{display:none}
 
 @media(max-width:768px){
-  /* ── Reset layout ── */
   .panel{display:none!important}
   .snap-col{display:none!important}
   .arr{display:none!important}
   .autoplay-tog{display:none!important}
 
-  /* Shell = flex colonne, occupe tout l'écran */
-  html,body{overflow:hidden;height:100%;position:fixed;width:100%}
+  /* body/html fixé */
+  html,body{overflow:hidden;position:fixed;width:100%;height:100%}
+
+  /* Shell = colonne verticale plein écran */
   .shell{
-    display:flex;flex-direction:column;
-    width:100vw;height:100%;
+    display:flex!important;
+    flex-direction:column!important;
+    width:100vw;
+    height:100%;
     overflow:hidden;
+    position:relative;
   }
 
-  /* Viewer = prend tout l'espace restant */
+  /* Viewer = flex:1 pour prendre tout l'espace */
   .viewer{
-    flex:1;min-height:0;
+    flex:1!important;
+    min-height:0!important;
+    width:100%;
     position:relative;
     background:#000;
-    overflow:hidden;
-    display:flex;align-items:center;justify-content:center;
+    display:flex;
+    align-items:stretch;
   }
   .snap-stage{
-    width:100%;height:100%;
-    aspect-ratio:unset;max-width:none;
-    border-radius:0;
+    width:100%!important;
+    height:100%!important;
+    aspect-ratio:unset!important;
+    max-width:none!important;
+    border-radius:0!important;
   }
   #mv,#mi{width:100%;height:100%;object-fit:cover}
 
-  /* Zones tap */
-  .tap-zone{
-    display:block;position:absolute;
-    top:0;bottom:0;width:35%;z-index:10;
-    background:transparent;
-  }
-  #tap-prev{left:0}
-  #tap-next{right:0}
-
-  /* Contrôles vidéo toujours visibles */
-  .snap-bot{opacity:1!important;padding:8px 12px 12px}
-  .snap-top{padding:10px 12px 8px}
-
-  /* ── NAV BAS ── */
+  /* Barre nav en bas, dans le shell */
   .mob-nav{
     display:flex!important;
     flex-shrink:0;
-    height:60px;
+    height:58px;
+    width:100%;
     background:var(--ink2);
     border-top:1px solid var(--border);
-    z-index:500;
+    z-index:100;
   }
   .mob-tab{
     flex:1;
     display:flex;flex-direction:column;
     align-items:center;justify-content:center;
-    gap:4px;
+    gap:3px;
     cursor:pointer;
     color:var(--fg3);
-    font-size:.5rem;font-weight:800;
-    text-transform:uppercase;letter-spacing:.05em;
-    transition:color .15s;
+    font-size:.48rem;font-weight:800;
+    text-transform:uppercase;letter-spacing:.04em;
+    border:none;background:none;
+    padding:6px 0;
     position:relative;
-    border:none;background:none;padding:0;
     -webkit-tap-highlight-color:transparent;
+    transition:color .12s;
   }
   .mob-tab.on{color:var(--hi)}
-  .mob-tab svg{width:22px;height:22px;transition:transform .15s}
-  .mob-tab.on svg{transform:scale(1.12)}
+  .mob-tab svg{width:20px;height:20px;display:block;transition:transform .15s}
+  .mob-tab.on svg{transform:scale(1.15)}
   .mob-badge{
-    position:absolute;top:4px;right:calc(50% - 18px);
+    position:absolute;top:4px;right:calc(50% - 20px);
     min-width:16px;height:16px;border-radius:99px;
     background:var(--red);color:#fff;
     font-size:.46rem;font-weight:900;
     display:none;align-items:center;justify-content:center;
-    padding:0 4px;font-family:'Fira Code',monospace;
+    padding:0 4px;
   }
 
-  /* ── DRAWERS ── */
+  /* tap zones */
+  .tap-zone{
+    display:block;
+    position:absolute;top:0;bottom:0;width:35%;
+    z-index:10;background:transparent;
+  }
+  #tap-prev{left:0}
+  #tap-next{right:0}
+
+  /* contrôles vidéo */
+  .snap-bot{opacity:1!important;padding:8px 12px 10px}
+  .snap-top{padding:10px 12px 8px}
+
+  /* Drawers = position:fixed, z-index élevé */
   .mob-drawer,.mob-snap-drawer{
     display:none;
-    position:fixed;inset:0;z-index:800;
-    background:rgba(0,0,0,.55);
+    position:fixed;inset:0;
+    z-index:9000;
+    background:rgba(0,0,0,.6);
     backdrop-filter:blur(6px);
     align-items:flex-end;
   }
-  .mob-drawer.open,.mob-snap-drawer.open{display:flex}
+  .mob-drawer.open,.mob-snap-drawer.open{display:flex!important}
 
   .mob-sheet,.mob-snap-sheet{
-    width:100%;
-    max-height:82vh;
+    width:100%;max-height:82vh;
     background:var(--ink2);
     border-radius:20px 20px 0 0;
-    border-top:1px solid var(--border);
+    border-top:1px solid var(--border2);
     display:flex;flex-direction:column;
     overflow:hidden;
   }
@@ -978,7 +986,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
     margin:10px auto 4px;flex-shrink:0;
   }
   .mob-sheet-title{
-    font-size:.85rem;font-weight:900;
+    font-size:.88rem;font-weight:900;
     padding:6px 18px 12px;
     flex-shrink:0;
     border-bottom:1px solid var(--border);
@@ -989,12 +997,12 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
     background:var(--ink4);border:1px solid var(--border);
     color:var(--fg2);cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    font-size:.75rem;line-height:1;
   }
+  .mob-sheet-close svg{width:14px;height:14px}
   .mob-sheet-body{overflow-y:auto;flex:1;padding:4px 0 20px}
   .mob-snaps-scroll{overflow-y:auto;flex:1}
 
-  /* ── Profils dans le drawer ── */
+  /* Profils drawer items */
   .mob-pi{
     display:flex;align-items:center;gap:14px;
     padding:12px 18px;
@@ -1005,7 +1013,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   .mob-pi.on{background:rgba(86,207,255,.07)}
   .mob-pi .av{width:44px;height:44px;font-size:.95rem;flex-shrink:0}
   .mob-pi-info{flex:1;min-width:0}
-  .mob-pi-name{font-size:.9rem;font-weight:800}
+  .mob-pi-name{font-size:.92rem;font-weight:800}
   .mob-pi.on .mob-pi-name{color:var(--hi)}
   .mob-pi-sub{font-size:.62rem;color:var(--fg3);margin-top:2px}
   .mob-pi-badge{
@@ -1016,7 +1024,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
     padding:0 5px;
   }
 
-  /* ── Filtres dans le snap drawer ── */
+  /* Snaps drawer filtres */
   .mob-filters{
     display:flex;gap:6px;padding:8px 14px;
     border-bottom:1px solid var(--border);
@@ -1030,16 +1038,14 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   }
   .mob-sort-lbl{font-size:.52rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.07em}
 
-  /* snap items dans le drawer mobile : légèrement plus grands */
+  /* Snap items plus grands */
   .si{padding:8px 14px}
-  .si-img{width:42px;height:58px}
-  .si-ph{width:42px;height:58px}
+  .si-img{width:40px;height:56px}
+  .si-ph{width:40px;height:56px}
   .si-num{font-size:.75rem}
-  .si-type{font-size:.56rem}
-  .si-ts{font-size:.55rem}
 
-  /* Toast */
-  #toasts{top:auto;bottom:72px;left:12px;right:12px;align-items:stretch}
+  /* Toasts */
+  #toasts{top:auto;bottom:66px;left:10px;right:10px;align-items:stretch}
   .toast{width:100%;max-width:100%;min-width:0}
 }
 """
@@ -2020,27 +2026,24 @@ buildProfiles = function() {
     html = (
         "<!DOCTYPE html>\n<html lang='fr'>\n<head>\n"
         "<meta charset='UTF-8'>"
-        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>"
         "<title>Team Nasdas Life</title>"
         "<style>" + css + "</style>"
         "</head>\n<body>\n"
+
+        # ── SHELL (desktop) ──
         "<div class='shell'>\n"
 
         # ── LEFT PANEL ──
         "<aside class='panel'>\n"
         "<div class='brand'>"
         "<div class='brand-wordmark'>Team <b>Nasdas</b> Life</div>"
-        ""
         "</div>\n"
-        ""
-
         "<div class='tabs'>"
         "<div class='tab on' id='tab-profiles' onclick=\"switchTab('profiles')\">Profils</div>"
         "<div class='tab' id='tab-lb'       onclick=\"switchTab('lb')\">Classement</div>"
         "<div class='tab' id='tab-hist'     onclick=\"switchTab('hist')\">Historique</div>"
         "</div>\n"
-
-        # pane: profiles
         "<div class='pane on' id='pane-profiles'>"
         "<div class='today-row' style='padding-bottom:8px'>"
         "<div style='display:flex;align-items:center;gap:6px'>"
@@ -2054,13 +2057,9 @@ buildProfiles = function() {
         "<div class='cat-bar' id='cat-bar'></div>"
         "<div class='prof-list' id='prof-list'></div>"
         "</div>\n"
-
-        # pane: classement
         "<div class='pane' id='pane-lb'>"
         "<div class='lb-list' id='lb-cont'></div>"
         "</div>\n"
-
-        # pane: historique
         "<div class='pane' id='pane-hist'>"
         "<div style='padding:9px 13px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between'>"
         "<span style='font-size:.68rem;font-weight:700;color:var(--fg2)'>Historique</span>"
@@ -2068,10 +2067,9 @@ buildProfiles = function() {
         "</div>"
         "<div class='hist-list' id='hist-cont'></div>"
         "</div>\n"
-
         "</aside>\n"
 
-        # ── SNAP LIST ──
+        # ── SNAP COL ──
         "<div class='snap-col'>"
         "<div class='sc-head'>"
         "<span class='sc-title' id='sc-title'>&mdash;</span>"
@@ -2094,10 +2092,8 @@ buildProfiles = function() {
         # ── VIEWER ──
         "<div class='viewer' id='viewer'>"
         "<div class='viewer-blur' id='viewer-blur'></div>"
-
         "<div class='snap-stage' id='snap-stage'>"
         "<div class='snap-prog' id='pbar'><div class='snap-prog-fill' id='pbar-fill'></div></div>"
-
         "<div class='snap-top'>"
         "<div class='snap-av' id='snap-av'></div>"
         "<div class='snap-info'>"
@@ -2106,16 +2102,12 @@ buildProfiles = function() {
         "</div>"
         "<span class='snap-type-badge v' id='snap-badge'>VIDEO</span>"
         "</div>"
-
         "<video id='mv' playsinline></video>"
         "<img id='mi' alt=''>"
-
         "<div class='tap-zone' id='tap-prev'></div>"
         "<div class='tap-zone' id='tap-next'></div>"
         "<div class='tap-center' id='tap-center'></div>"
-
         "<div class='snap-idx' id='snap-idx'></div>"
-
         "<div class='snap-bot'>"
         "<button class='s-btn' id='btn-pause'>&#9208;</button>"
         "<button class='s-btn' id='btn-fs'>&#9974;</button>"
@@ -2125,38 +2117,33 @@ buildProfiles = function() {
         "</div>"
         "<span class='counter' id='snap-counter'>&mdash;</span>"
         "</div>"
-
         "</div>\n"
-
         "<button class='arr' id='arr-prev'>&#8249;</button>"
         "<button class='arr' id='arr-next'>&#8250;</button>"
-
         "<div class='viewer-empty' id='viewer-empty'>"
         "<div class='viewer-empty-icon'>&#9654;</div>"
         "<div class='viewer-empty-txt'>Choisir un snap</div>"
         "</div>"
-
         "<div class='autoplay-tog' id='auto-tog'>"
         "<div class='tgl on' id='tgl'><div class='tgl-k'></div></div>"
         "Autoplay"
         "</div>"
-
-        "</div>\n"
         "</div>\n"
 
-        "<div id='toasts'></div>"
-
-        # ── MOBILE NAV ──
-        "<nav class='mob-nav'>"
-        "<button class='mob-tab on' id='mob-tab-home' onclick='mobTabHome()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2'/></svg>Viewer</button>"
-        "<button class='mob-tab' id='mob-tab-profs' onclick='mobTabProfs()'>"
-        "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg>"
-        "<span class='mob-badge' id='mob-badge-profs'>0</span>Profils</button>"
-        "<button class='mob-tab' id='mob-tab-snaps' onclick='mobTabSnaps()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='8' y1='6' x2='21' y2='6'/><line x1='8' y1='12' x2='21' y2='12'/><line x1='8' y1='18' x2='21' y2='18'/><line x1='3' y1='6' x2='3.01' y2='6'/><line x1='3' y1='12' x2='3.01' y2='12'/><line x1='3' y1='18' x2='3.01' y2='18'/></svg>Snaps</button>"
-        "<button class='mob-tab' id='mob-tab-lb' onclick='mobTabLB()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg>Top</button>"
+        # ── MOBILE NAV (dans le shell, après viewer) ──
+        "<nav class='mob-nav' id='mob-nav'>"
+        "<button class='mob-tab on' id='mob-tab-home' onclick='mobTabHome()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2'/></svg><span>Viewer</span></button>"
+        "<button class='mob-tab' id='mob-tab-profs' onclick='mobTabProfs()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg><span class='mob-badge' id='mob-badge-profs'></span><span>Profils</span></button>"
+        "<button class='mob-tab' id='mob-tab-snaps' onclick='mobTabSnaps()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='8' y1='6' x2='21' y2='6'/><line x1='8' y1='12' x2='21' y2='12'/><line x1='8' y1='18' x2='21' y2='18'/><line x1='3' y1='6' x2='3.01' y2='6'/><line x1='3' y1='12' x2='3.01' y2='12'/><line x1='3' y1='18' x2='3.01' y2='18'/></svg><span>Snaps</span></button>"
+        "<button class='mob-tab' id='mob-tab-lb' onclick='mobTabLB()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg><span>Top</span></button>"
         "</nav>"
 
-        # ── MOBILE PROFILS DRAWER ──
+        "</div>\n"
+
+        # ── TOASTS ──
+        "<div id='toasts'></div>"
+
+        # ── MOBILE DRAWERS (hors shell, position:fixed) ──
         "<div class='mob-drawer' id='mob-drawer-profs' onclick='mobCloseDrawer(event,this)'>"
         "<div class='mob-sheet'>"
         "<div class='mob-sheet-handle'></div>"
@@ -2166,8 +2153,6 @@ buildProfiles = function() {
         "</div>"
         "<div class='mob-sheet-body' id='mob-prof-list'></div>"
         "</div></div>"
-
-        # ── MOBILE SNAPS DRAWER ──
         "<div class='mob-snap-drawer' id='mob-drawer-snaps' onclick='mobCloseDrawer(event,this)'>"
         "<div class='mob-snap-sheet'>"
         "<div class='mob-sheet-handle'></div>"

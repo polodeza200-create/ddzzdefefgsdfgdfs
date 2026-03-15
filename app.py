@@ -1,3 +1,12 @@
+"""
+SNAPCHAT MULTI-PROFILE MONITOR & VIEWER v4
+- Fix tri par récent (sort stable par ts_unix)
+- Heure française (Europe/Paris) dans l'affichage
+- Avatar auto-détecté depuis HTML (pattern _RS126,126)
+- Viewer auto-refresh toutes les 15s sans recharger la page
+- Historique avec preview + clic pour jouer
+"""
+
 import urllib.request
 import urllib.error
 import json
@@ -1876,6 +1885,40 @@ def monitor_loop(states: list, once: bool = False):
 
 
 # ─────────────────────────────────────────────
+#  HTTP SERVER (Railway / production)
+# ─────────────────────────────────────────────
+
+def start_http_server():
+    import http.server
+    import threading
+
+    port = int(os.environ.get("PORT", 8080))
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(Path(".").resolve()), **kwargs)
+
+        def do_GET(self):
+            if self.path in ("/", ""):
+                self.send_response(302)
+                self.send_header("Location", "/viewers/viewer.html")
+                self.end_headers()
+            else:
+                super().do_GET()
+
+        def log_message(self, format, *args):
+            pass  # silence les logs HTTP
+
+    def run():
+        with http.server.ThreadingHTTPServer(("0.0.0.0", port), Handler) as httpd:
+            print(f"Serveur HTTP démarré sur le port {port}", flush=True)
+            httpd.serve_forever()
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+
+
+# ─────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────
 
@@ -1885,6 +1928,8 @@ def main():
     global_logger = setup_logger("global", "monitor.log")
 
     once = "--once" in sys.argv
+
+    start_http_server()
 
     global_logger.info("SNAPCHAT MONITOR v4 — rotation 1 profil / " + str(REFRESH_INTERVAL) + "s")
     global_logger.info("Profils : " + ", ".join(PROFILES))

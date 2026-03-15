@@ -749,7 +749,7 @@ html,body{height:100%;background:var(--ink);color:var(--fg);font-family:'Nunito'
 input.vol-r{-webkit-appearance:none;appearance:none;flex:1;max-width:90px;height:2px;background:rgba(255,255,255,.18);border-radius:99px;outline:none;cursor:pointer}
 input.vol-r::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;border-radius:50%;background:#fff;cursor:pointer}
 input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:#fff;cursor:pointer;border:none}
-.counter{font-size:.58rem;color:rgba(255,255,255,.45);font-family:'Fira Code',monospace;margin-left:auto}
+.counter{display:none}
 .arr{position:absolute;top:50%;transform:translateY(-50%);z-index:30;width:44px;height:44px;border-radius:50%;cursor:pointer;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:1.3rem;backdrop-filter:blur(12px);transition:all .15s;opacity:0}
 .viewer:hover .arr{opacity:1}
 .arr:hover{background:rgba(255,255,255,.16);color:#fff;transform:translateY(-50%) scale(1.06)}
@@ -762,8 +762,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   #tap-next{right:0}
 }
 .tap-center{position:absolute;top:15%;bottom:15%;left:22%;right:22%;z-index:11;cursor:pointer;background:transparent}
-.snap-idx{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.65);color:#fff;font-family:'Fira Code',monospace;font-size:.75rem;font-weight:500;padding:5px 12px;border-radius:6px;pointer-events:none;z-index:25;opacity:0;transition:opacity .2s}
-.snap-idx.show{opacity:1}
+.snap-idx{display:none}
 .autoplay-tog{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:6px;font-size:.6rem;color:rgba(255,255,255,.4);cursor:pointer;user-select:none;opacity:0;transition:opacity .18s}
 .viewer:hover .autoplay-tog{opacity:1}
 .tgl{width:28px;height:15px;background:rgba(255,255,255,.15);border-radius:99px;position:relative;transition:background .17s}
@@ -948,14 +947,12 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
     padding:0 4px;
   }
 
-  /* tap zones */
-  .tap-zone{
-    display:block;
-    position:absolute;top:0;bottom:0;width:35%;
-    z-index:10;background:transparent;
-  }
-  #tap-prev{left:0}
-  #tap-next{right:0}
+  /* tap zones désactivées sur mobile — swipe uniquement */
+  .tap-zone{display:none!important}
+  .tap-center{display:none!important}
+
+  /* today-chip visible dans le drawer profils mobile */
+  #today-chip{display:flex}
 
   /* contrôles vidéo */
   .snap-bot{opacity:1!important;padding:8px 12px 10px}
@@ -1374,8 +1371,8 @@ function playAt(i) {
   if (el) { el.classList.add('cur','playing'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 
   pf.style.transition = 'none'; pf.style.width = '0%';
-  bPause.textContent = '⏸';
-  sCounter.textContent = (i+1) + ' / ' + queue.length;
+  bPause.innerHTML = '⏸';
+  // counter supprimé
 
   var pname = NAMES[s.profile] || s.profile || '';
   sName.textContent = pname;
@@ -1394,10 +1391,7 @@ function playAt(i) {
   if (previewSrc) blurBg.style.backgroundImage = 'url(' + previewSrc + ')';
   emptyEl.style.display = 'none';
 
-  idxEl.textContent = (i+1) + ' / ' + queue.length;
-  idxEl.classList.add('show');
-  clearTimeout(idxT);
-  idxT = setTimeout(function(){ idxEl.classList.remove('show'); }, 900);
+  // snap-idx supprimé
 
   saveSession();
 
@@ -1432,9 +1426,9 @@ mv.addEventListener('ended', function(){
 });
 mv.addEventListener('play', function(){
   var el = document.getElementById('si-'+qi); if(el) el.classList.add('playing');
-  bPause.textContent = '⏸';
+  bPause.innerHTML = '⏸';
 });
-mv.addEventListener('pause', function(){ bPause.textContent = '▶'; });
+mv.addEventListener('pause', function(){ bPause.innerHTML = '▶'; });
 
 pbar.onclick = function(e){
   if (queue[qi]&&queue[qi].type===1&&mv.duration) {
@@ -1456,13 +1450,12 @@ function updFS(){
 document.addEventListener('fullscreenchange', updFS);
 document.addEventListener('webkitfullscreenchange', updFS);
 bFS.onclick = function(){
-  var stage = document.getElementById('snap-stage');
+  var el = document.getElementById('snap-stage');
   if (isFS()) {
-    if (document.exitFullscreen) document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||function(){}).call(document);
   } else {
-    if (stage.requestFullscreen) stage.requestFullscreen();
-    else if (stage.webkitRequestFullscreen) stage.webkitRequestFullscreen();
+    var req = el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;
+    if (req) req.call(el);
   }
 };
 
@@ -1879,13 +1872,30 @@ playAt = function(i) {
     var el = slMob.querySelector('#si-' + i);
     if (el) { el.classList.add('cur'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
   }
-  if (isMobile()) mobTabHome();
+  // Sur mobile, ne pas forcer retour viewer (l'user gère via la nav)
 };
 
 function mobBuildProfs() {
   var cont = document.getElementById('mob-prof-list');
   if (!cont) return;
   cont.innerHTML = '';
+  // Item Today
+  var todayEl = document.createElement('div');
+  todayEl.className = 'mob-pi' + (qMode==='today' ? ' on' : '');
+  var todayCnt = getToday().length;
+  todayEl.innerHTML =
+    '<div class="av" style="background:rgba(86,207,255,.12);border-color:rgba(86,207,255,.3)"><svg viewBox='0 0 24 24' fill='none' stroke='var(--hi)' stroke-width='2' stroke-linecap='round'><rect x='3' y='4' width='18' height='18' rx='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/></svg></div>' +
+    '<div class="mob-pi-info"><div class="mob-pi-name" style="color:var(--hi)">Today</div><div class="mob-pi-sub">' + todayCnt + ' snaps aujourd'hui</div></div>';
+  todayEl.onclick = function() {
+    todayMode();
+    mobCloseProfs();
+    setTimeout(function(){ mobTabSnaps(); }, 80);
+  };
+  cont.appendChild(todayEl);
+  // Séparateur
+  var sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0';
+  cont.appendChild(sep);
   PROFS.forEach(function(p) {
     var snaps = ALL[p] || [];
     var el = document.createElement('div');
@@ -1989,21 +1999,38 @@ buildProfiles = function() {
   }
 };
 
-/* Swipe horizontal sur le viewer pour changer de snap */
+/* ── MOBILE : swipe + tap pause ── */
 (function(){
-  var sx = null;
+  if (!('ontouchstart' in window)) return;
   var stage = document.getElementById('snap-stage');
   if (!stage) return;
+
+  var sx = 0, sy = 0, moved = false;
+
   stage.addEventListener('touchstart', function(e){
     sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    moved = false;
   }, {passive:true});
+
+  stage.addEventListener('touchmove', function(e){
+    var dx = Math.abs(e.touches[0].clientX - sx);
+    var dy = Math.abs(e.touches[0].clientY - sy);
+    if (dx > 8 || dy > 8) moved = true;
+  }, {passive:true});
+
   stage.addEventListener('touchend', function(e){
-    if (sx === null) return;
     var dx = e.changedTouches[0].clientX - sx;
-    if (Math.abs(dx) > 40) {
+    var dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+      // swipe horizontal → changer snap
       if (dx < 0) navNext(); else navPrev();
+    } else if (!moved) {
+      // tap simple → pause/play
+      if (mv.style.display !== 'none') {
+        mv.paused ? mv.play().catch(function(){}) : mv.pause();
+      }
     }
-    sx = null;
   }, {passive:true});
 })();
 """
@@ -2107,15 +2134,15 @@ buildProfiles = function() {
         "<div class='tap-zone' id='tap-prev'></div>"
         "<div class='tap-zone' id='tap-next'></div>"
         "<div class='tap-center' id='tap-center'></div>"
-        "<div class='snap-idx' id='snap-idx'></div>"
+        ""
         "<div class='snap-bot'>"
-        "<button class='s-btn' id='btn-pause'>&#9208;</button>"
+        "<button class='s-btn' id='btn-pause'>⏸</button>"
         "<button class='s-btn' id='btn-fs'>&#9974;</button>"
         "<div class='vol-grp'>"
         "<span class='vol-ic' id='vol-ico'>&#128266;</span>"
         "<input type='range' class='vol-r' id='vol' min='0' max='100' value='80'>"
         "</div>"
-        "<span class='counter' id='snap-counter'>&mdash;</span>"
+        ""
         "</div>"
         "</div>\n"
         "<button class='arr' id='arr-prev'>&#8249;</button>"

@@ -885,11 +885,11 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   .arr{display:none!important}
 
   /* Shell = colonne plein écran */
-  .shell{flex-direction:column;height:100vh;overflow:hidden}
+  .shell{flex-direction:column;height:100svh;height:100vh;overflow:hidden;position:fixed;inset:0}
 
   /* Viewer prend tout sauf la nav du bas */
-  .viewer{flex:1;height:calc(100vh - 56px);overflow:hidden}
-  .snap-stage{height:100%;aspect-ratio:unset;width:100%;border-radius:0}
+  .viewer{flex:1;min-height:0;overflow:hidden;width:100%}
+  .snap-stage{height:100%;aspect-ratio:unset;width:100%;border-radius:0;display:flex;align-items:center;justify-content:center}
 
   /* Contrôles toujours visibles sur mobile */
   .snap-bot{opacity:1!important}
@@ -901,24 +901,26 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   /* Barre de navigation en bas */
   .mob-nav{
     display:flex!important;
-    height:56px;flex-shrink:0;
+    height:64px;flex-shrink:0;
     background:var(--ink2);
     border-top:1px solid var(--border);
     z-index:200;
+    padding-bottom:env(safe-area-inset-bottom);
   }
   .mob-tab{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:2px;cursor:pointer;color:var(--fg3);font-size:.48rem;font-weight:700;
-    text-transform:uppercase;letter-spacing:.06em;transition:color .12s;
-    position:relative;
+    gap:3px;cursor:pointer;color:var(--fg3);font-size:.52rem;font-weight:800;
+    text-transform:uppercase;letter-spacing:.05em;transition:color .12s;
+    position:relative;padding:8px 0;
   }
   .mob-tab.on{color:var(--hi)}
-  .mob-tab-icon{font-size:1.1rem;line-height:1}
+  .mob-tab.on .mob-tab-icon{transform:scale(1.15)}
+  .mob-tab-icon{font-size:1.25rem;line-height:1;transition:transform .15s}
   .mob-badge{
-    position:absolute;top:6px;right:calc(50% - 14px);
-    min-width:14px;height:14px;border-radius:99px;
-    background:var(--red);color:#fff;font-size:.45rem;font-weight:800;
-    display:none;align-items:center;justify-content:center;padding:0 3px;
+    position:absolute;top:5px;right:calc(50% - 16px);
+    min-width:16px;height:16px;border-radius:99px;
+    background:var(--red);color:#fff;font-size:.48rem;font-weight:800;
+    display:none;align-items:center;justify-content:center;padding:0 4px;
   }
 
   /* Drawer profils mobile */
@@ -1372,7 +1374,7 @@ function playAt(i) {
     setTimeout(function(){
       pf.style.transition='width 3s linear'; pf.style.width='100%';
     }, 50);
-    if (autoP) imgT = setTimeout(function(){ if(qi===i) playAt(i+1); }, 3100);
+    if (autoP) imgT = setTimeout(function(){ if(qi===i) navNext(); }, 3100);
   }
 }
 
@@ -1384,7 +1386,7 @@ mv.addEventListener('ended', function(){
   var o = document.getElementById('si-'+qi); if(o) o.classList.remove('playing');
   if (autoP) {
     pf.style.transition = 'none'; pf.style.width = '0%';
-    playAt(qi + 1);
+    navNext();
   }
 });
 mv.addEventListener('play', function(){

@@ -959,24 +959,32 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   .snap-top{padding:10px 12px 8px}
   #snap-badge{display:none!important}
 
-  /* Drawers = position:fixed, z-index élevé */
+  /* Drawers = position:fixed, z-index élevé + animation */
+  @keyframes drawerIn{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  @keyframes drawerOut{from{transform:translateY(0);opacity:1}to{transform:translateY(100%);opacity:0}}
+  @keyframes mobFadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes snapFlash{0%{opacity:.6}100%{opacity:1}}
+  @keyframes tabPop{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+
   .mob-drawer,.mob-snap-drawer{
     display:none;
     position:fixed;inset:0;
     z-index:9000;
-    background:rgba(0,0,0,.6);
-    backdrop-filter:blur(6px);
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(8px);
     align-items:flex-end;
+    animation:mobFadeIn .18s ease;
   }
   .mob-drawer.open,.mob-snap-drawer.open{display:flex!important}
 
   .mob-sheet,.mob-snap-sheet{
-    width:100%;max-height:82vh;
+    width:100%;max-height:85vh;
     background:var(--ink2);
-    border-radius:20px 20px 0 0;
-    border-top:1px solid var(--border2);
+    border-radius:22px 22px 0 0;
+    border-top:2px solid var(--border2);
     display:flex;flex-direction:column;
     overflow:hidden;
+    animation:drawerIn .28s cubic-bezier(.34,1.3,.64,1);
   }
   .mob-sheet-handle{
     width:38px;height:4px;border-radius:99px;
@@ -999,6 +1007,8 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   .mob-sheet-close svg{width:14px;height:14px}
   .mob-sheet-body{overflow-y:auto;flex:1;padding:4px 0 20px}
   .mob-snaps-scroll{overflow-y:auto;flex:1}
+  #mob-hist-list{display:flex;flex-direction:column;overflow:hidden}
+  #mob-hist-list > div:last-child{overflow-y:auto;flex:1}
 
   /* Profils drawer items */
   .mob-pi{
@@ -1036,11 +1046,54 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   }
   .mob-sort-lbl{font-size:.52rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.07em}
 
-  /* Snap items plus grands */
-  .si{padding:8px 14px}
+  /* Snap items plus grands + animation */
+  .si{padding:8px 14px;animation:mobFadeIn .2s ease both}
   .si-img{width:40px;height:56px}
   .si-ph{width:40px;height:56px}
   .si-num{font-size:.75rem}
+  /* Tab pop animation quand nouveau snap */
+  .mob-tab.new-ping svg{animation:tabPop .4s ease}
+  /* Toast animé */
+  .toast{animation:drawerIn .22s cubic-bezier(.34,1.2,.64,1)}
+  /* Profil item animation */
+  .mob-pi{transition:background .12s,transform .1s}
+  .mob-pi:active{transform:scale(.97);background:var(--ink3)}
+  /* Hist sous-onglets */
+  .mob-hist-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+  .mob-hist-tab{flex:1;padding:10px 0;text-align:center;font-size:.65rem;font-weight:800;
+    color:var(--fg3);cursor:pointer;border-bottom:2px solid transparent;transition:all .13s}
+  .mob-hist-tab.on{color:var(--hi);border-bottom-color:var(--hi)}
+  /* Filtre notifs dans profils */
+  .mob-notif-row{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 18px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .mob-notif-lbl{font-size:.75rem;font-weight:700}
+  .mob-notif-sub{font-size:.58rem;color:var(--fg3);margin-top:1px}
+  .mob-notif-tgl{width:36px;height:20px;border-radius:99px;background:rgba(255,255,255,.12);
+    position:relative;cursor:pointer;flex-shrink:0;transition:background .15s}
+  .mob-notif-tgl.on{background:var(--green)}
+  .mob-notif-tgl::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;
+    border-radius:50%;background:#fff;transition:left .14s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .mob-notif-tgl.on::after{left:19px}
+  /* Reprendre items */
+  .mob-resume-item{display:flex;align-items:center;gap:10px;padding:10px 16px;
+    border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .1s}
+  .mob-resume-item:active{background:var(--ink3)}
+  .mob-resume-thumb{width:40px;height:56px;border-radius:8px;object-fit:cover;
+    border:1px solid var(--border);flex-shrink:0}
+  .mob-resume-ph{width:40px;height:56px;border-radius:8px;background:var(--ink4);
+    border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;
+    justify-content:center;font-size:.9rem}
+  .mob-resume-info{flex:1;min-width:0}
+  .mob-resume-name{font-size:.82rem;font-weight:800}
+  .mob-resume-detail{font-size:.6rem;color:var(--fg3);margin-top:2px;font-family:Fira Code,monospace}
+  /* Filtre profils pour today/hier */
+  .mob-day-filter{display:flex;gap:5px;padding:6px 14px;border-bottom:1px solid var(--border);
+    flex-shrink:0;overflow-x:auto}
+  .mob-day-filter::-webkit-scrollbar{display:none}
+  .mob-df-btn{padding:4px 10px;border-radius:99px;font-size:.6rem;font-weight:800;
+    border:1px solid var(--border2);color:var(--fg3);background:transparent;cursor:pointer;
+    white-space:nowrap;transition:all .12s;-webkit-tap-highlight-color:transparent}
+  .mob-df-btn.on{background:rgba(86,207,255,.12);color:var(--hi);border-color:rgba(86,207,255,.3)}
 
   /* Toasts */
   #toasts{top:auto;bottom:66px;left:10px;right:10px;align-items:stretch}
@@ -1502,13 +1555,21 @@ document.getElementById('auto-tog').onclick = function(){
 
 /* ── toast ── */
 function showToast(profile, idx, type) {
+  // Sur mobile : afficher seulement si notifs activées pour ce profil
+  if ('ontouchstart' in window && !mobNotifEnabled[profile]) return;
   var wrap=document.getElementById('toasts');
   var el=document.createElement('div');
   el.className='toast';
+  el.style.animation='drawerIn .22s cubic-bezier(.34,1.2,.64,1)';
   el.innerHTML='<div class="t-av">'+avHtml(profile)+'</div><div class="t-body"><div class="t-name">'+(NAMES[profile]||profile)+'</div><div class="t-msg">#'+idx+' · '+type+'</div></div>';
   wrap.appendChild(el);
-  el.onclick=function(){selProf(profile);switchTab('profiles');};
-  setTimeout(function(){el.classList.add('out');setTimeout(function(){el.remove();},180);},4200);
+  el.onclick=function(){selProf(profile);if('ontouchstart' in window)mobTabSnaps();else switchTab('profiles');};
+  // Tab ping animation sur mobile
+  if ('ontouchstart' in window) {
+    var tab = document.getElementById('mob-tab-profs');
+    if (tab) { tab.classList.add('new-ping'); setTimeout(function(){ tab.classList.remove('new-ping'); }, 500); }
+  }
+  setTimeout(function(){el.classList.add('out');setTimeout(function(){el.remove();},180);},4500);
 }
 
 /* ── badge ── */
@@ -1758,68 +1819,10 @@ function setNoResume(profile, val) {
   } catch(e) {}
 }
 
-function showResumeModal(profile, sess) {
-  // Si no-resume pour ce profil -> ne rien montrer
-  if (isNoResume(profile)) { clearSessionForProfile(profile); return; }
-
-  var overlay = document.createElement('div');
-  overlay.className = 'wb-overlay';
-  overlay.id = 'wb-overlay';
-
-  var prevImgH = sess.preview
-    ? '<img src="' + sess.preview + '" alt="">'
-    : '▶';
-
-  overlay.innerHTML =
-    '<div class="wb-card">' +
-      '<div class="wb-title">Reprendre ?</div>' +
-      '<div class="wb-sub">Tu regardais un snap de <b style="color:var(--fg)">' + (NAMES[profile]||profile) + '</b></div>' +
-      '<div class="wb-resume">' +
-        '<div class="wb-resume-prev">' + prevImgH + '</div>' +
-        '<div class="wb-resume-info">' +
-          '<div class="wb-resume-name">' + (NAMES[profile]||profile) + ' — #' + sess.snap_index + '</div>' +
-          '<div class="wb-resume-detail">' + (sess.ts_name||'') + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="wb-no-show-row">' +
-        '<label class="wb-chk-label">' +
-          '<input type="checkbox" id="wb-no-show-chk"> Ne plus afficher ce message' +
-        '</label>' +
-      '</div>' +
-      '<div class="wb-btns">' +
-        '<button class="wb-btn yes" id="wb-yes">Reprendre</button>' +
-        '<button class="wb-btn no"  id="wb-no">Non merci</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(overlay);
-
-  function closeModal(resume) {
-    var chk = document.getElementById('wb-no-show-chk');
-    if (chk && chk.checked) setNoResume(profile, true);
-    clearSessionForProfile(profile);
-    overlay.classList.add('hide');
-    setTimeout(function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 200);
-    if (resume) {
-      var idx = findSnapInQueue(profile, sess.snap_index);
-      if (idx >= 0) playAt(idx);
-    }
-  }
-
-  document.getElementById('wb-yes').onclick = function() { closeModal(true); };
-  document.getElementById('wb-no').onclick  = function() { closeModal(false); };
-  overlay.onclick = function(e) { if (e.target === overlay) closeModal(false); };
-}
-
-/* Override selProf pour déclencher le modal resume si besoin */
+/* Override selProf - pas de modal resume */
 var _origSelProf = selProf;
 selProf = function(p) {
   _origSelProf(p);
-  var sess = loadSessionForProfile(p);
-  if (!sess) return;
-  var age = Date.now() - (sess.saved_at || 0);
-  if (age > 86400000) { clearSessionForProfile(p); return; }
-  setTimeout(function() { showResumeModal(p, sess); }, 80);
 };
 
 /* Welcome back : afficher uniquement si nouveaux snaps depuis dernière visite */
@@ -1926,67 +1929,94 @@ playAt = function(i) {
   // Sur mobile, ne pas forcer retour viewer (l'user gère via la nav)
 };
 
+// Filtre jour actif: 'today', 'hier', ou null (profils normaux)
+var mobDayMode = null;
+var mobDayFilterProfs = {}; // profils exclus du filtre jour
+
 function mobBuildProfs() {
   var cont = document.getElementById('mob-prof-list');
   if (!cont) return;
   cont.innerHTML = '';
-  // Item Today
-  var todayEl = document.createElement('div');
-  todayEl.className = 'mob-pi' + (qMode==='today' ? ' on' : '');
-  var todayCnt = getToday().length;
-  todayEl.innerHTML =
-    "<div class=\"av\" style=\"background:rgba(86,207,255,.12);border-color:rgba(86,207,255,.3)\">&#x1F4C5;</div>" +
-    "<div class=\"mob-pi-info\"><div class=\"mob-pi-name\" style=\"color:var(--hi)\">Aujourd'hui</div><div class=\"mob-pi-sub\">" + todayCnt + " snaps</div></div>";
-  todayEl.onclick = function() {
-    todayMode();
-    mobCloseProfs();
-    setTimeout(function(){ mobTabSnaps(); }, 80);
-  };
-  cont.appendChild(todayEl);
-  // Item Hier
-  var hierEl = document.createElement('div');
-  hierEl.className = 'mob-pi';
-  var hierSnaps = [];
-  PROFS.forEach(function(p){ (ALL[p]||[]).forEach(function(s){ if(inBounds(s,YEST_B)) hierSnaps.push(s); }); });
-  var hierCnt = hierSnaps.length;
-  hierEl.innerHTML =
-    "<div class=\"av\" style=\"background:rgba(86,207,255,.06);border-color:rgba(86,207,255,.15)\">&#x23F3;</div>" +
-    "<div class=\"mob-pi-info\"><div class=\"mob-pi-name\">Hier</div><div class=\"mob-pi-sub\">" + hierCnt + " snaps</div></div>";
-  hierEl.onclick = function() {
-    // Mode hier : comme todayMode mais avec YEST_B
-    qMode = 'today'; qi = -1;
-    document.querySelectorAll('.pi').forEach(function(el){ el.classList.remove('on'); });
-    document.getElementById('today-chip').classList.add('on');
-    var snaps = [];
-    PROFS.forEach(function(p){ if(!todayExcluded[p]) (ALL[p]||[]).forEach(function(s){ if(inBounds(s,YEST_B)) snaps.push(s); }); });
-    snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
-    queue = snaps; filt='all'; srt='chrono'; resetFilterBtns();
-    buildSnapList(snaps, true);
-    scTitle.textContent = "Hier"; scCnt.textContent = snaps.length + ' snaps';
-    mobCloseProfs();
-    setTimeout(function(){ mobTabSnaps(); }, 80);
-  };
-  cont.appendChild(hierEl);
+
+  // ── Section Aujourd'hui / Hier ──
+  var daySection = document.createElement('div');
+  daySection.style.cssText = 'padding:10px 16px 6px';
+
+  // Boutons Aujourd'hui / Hier
+  var dayBtns = document.createElement('div');
+  dayBtns.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
+  ['Aujourd\'hui','Hier'].forEach(function(label, idx) {
+    var mode = idx===0 ? 'today' : 'hier';
+    var btn = document.createElement('button');
+    btn.className = 'mob-df-btn' + (mobDayMode===mode?' on':'');
+    btn.textContent = label;
+    btn.onclick = function() {
+      mobDayMode = mobDayMode===mode ? null : mode;
+      mobBuildProfs();
+    };
+    dayBtns.appendChild(btn);
+  });
+  daySection.appendChild(dayBtns);
+
+  // Si mode jour actif : afficher les filtres profils
+  if (mobDayMode) {
+    var bounds = mobDayMode==='today' ? TODAY_B : YEST_B;
+    var filterWrap = document.createElement('div');
+    filterWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px';
+    PROFS.forEach(function(p) {
+      var excluded = !!mobDayFilterProfs[p];
+      var chip = document.createElement('button');
+      chip.className = 'mob-df-btn' + (excluded?'':' on');
+      chip.innerHTML = '<div style="display:inline-flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--ink4)">' + avHtml(p) + '</div>' + (NAMES[p]||p) + '</div>';
+      chip.onclick = function(e) {
+        e.stopPropagation();
+        mobDayFilterProfs[p] = !mobDayFilterProfs[p];
+        mobBuildProfs();
+      };
+      filterWrap.appendChild(chip);
+    });
+    daySection.appendChild(filterWrap);
+
+    var goBtn = document.createElement('button');
+    goBtn.style.cssText = 'width:100%;padding:10px;border-radius:12px;background:var(--hi);color:var(--ink);font-size:.8rem;font-weight:900;border:none;cursor:pointer;margin-top:2px';
+    goBtn.textContent = 'Voir ' + (mobDayMode==='today'?"Aujourd'hui":'Hier');
+    goBtn.onclick = function() {
+      qMode='today'; qi=-1;
+      var snaps=[];
+      PROFS.forEach(function(p){ if(!mobDayFilterProfs[p]) (ALL[p]||[]).forEach(function(s){ if(inBounds(s,bounds)) snaps.push(s); }); });
+      snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
+      queue=snaps; filt='all'; srt='chrono'; resetFilterBtns();
+      buildSnapList(snaps,true);
+      scTitle.textContent=mobDayMode==='today'?"Aujourd'hui":"Hier";
+      scCnt.textContent=snaps.length+' snaps';
+      mobCloseProfs();
+      setTimeout(function(){ mobTabSnaps(); },80);
+    };
+    daySection.appendChild(goBtn);
+  }
+  cont.appendChild(daySection);
+
   // Séparateur
   var sep = document.createElement('div');
-  sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0';
+  sep.style.cssText = 'height:1px;background:var(--border);margin:0 0 4px';
   cont.appendChild(sep);
+
+  // ── Liste profils ──
   PROFS.forEach(function(p) {
     var snaps = ALL[p] || [];
     var el = document.createElement('div');
-    el.className = 'mob-pi' + (p === curProf ? ' on' : '');
+    el.className = 'mob-pi' + (p===curProf?' on':'');
     el.innerHTML =
-      '<div class="av">' + avHtml(p) + '</div>' +
-      '<div class="mob-pi-info">' +
-        '<div class="mob-pi-name">' + (NAMES[p]||p) + '</div>' +
-        '<div class="mob-pi-sub">' + snaps.length + ' snaps · ' + (CATS[p]||'') + '</div>' +
-      '</div>' +
-      '<div class="mob-pi-badge" id="mob-pib-' + p + '" style="display:' + (newCnts[p]>0?'flex':'none') + '">' + (newCnts[p]||0) + '</div>';
+      '<div class="av">'+avHtml(p)+'</div>'+
+      '<div class="mob-pi-info">'+
+        '<div class="mob-pi-name">'+(NAMES[p]||p)+'</div>'+
+        '<div class="mob-pi-sub">'+snaps.length+' snaps · '+(CATS[p]||'')+'</div>'+
+      '</div>'+
+      '<div class="mob-pi-badge" id="mob-pib-'+p+'" style="display:'+(newCnts[p]>0?'flex':'none')+'">'+
+        (newCnts[p]||0)+'</div>';
     el.onclick = function() {
-      selProf(p);
-      mobCloseProfs();
-      // Ouvrir le drawer snaps après
-      setTimeout(function(){ mobTabSnaps(); }, 120);
+      selProf(p); mobCloseProfs();
+      setTimeout(function(){ mobTabSnaps(); },120);
     };
     cont.appendChild(el);
   });
@@ -2098,40 +2128,149 @@ function mobTabHist() {
   document.getElementById('mob-drawer-hist').classList.add('open');
 }
 
+// Onglet historique actif
+var mobHistTab = 'snaps'; // 'snaps' ou 'reprendre'
+// Notifs activées par profil
+var mobNotifEnabled = {};
+try { mobNotifEnabled = JSON.parse(localStorage.getItem('snapmon_notifs')||'{}'); } catch(e){}
+function saveMobNotif() { try{ localStorage.setItem('snapmon_notifs', JSON.stringify(mobNotifEnabled)); }catch(e){} }
+
+// Sessions de reprendre : {profile: {snap_index, preview, ts_name, saved_at}}
+function getAllResumeSessions() {
+  try {
+    var raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return [];
+    var data = JSON.parse(raw);
+    var list = [];
+    PROFS.forEach(function(p) {
+      if (data[p] && data[p].snap_index !== undefined) {
+        var age = Date.now() - (data[p].saved_at||0);
+        if (age < 7*86400000) list.push({profile:p, sess:data[p]});
+      }
+    });
+    return list;
+  } catch(e) { return []; }
+}
+
 function mobBuildHist() {
   var cont = document.getElementById('mob-hist-list');
   if (!cont) return;
   cont.innerHTML = '';
-  if (!logs.length) {
-    cont.innerHTML = '<div style="padding:28px;text-align:center;font-size:.75rem;color:var(--fg3)">Aucun historique</div>';
-    return;
-  }
-  logs.slice().reverse().forEach(function(e) {
-    var el = document.createElement('div');
-    el.className = 'mob-pi';
-    el.style.cssText = 'align-items:flex-start;gap:10px;padding:10px 16px';
-    var prevH = e.preview
-      ? '<img src="' + e.preview + '" style="width:36px;height:50px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)" loading="lazy">'
-      : '<div style="width:36px;height:50px;border-radius:6px;background:var(--ink4);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.8rem">' + (e.type==='VIDEO'?'&#127909;':'&#128247;') + '</div>';
-    el.innerHTML =
-      prevH +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:.82rem;font-weight:800">' + (NAMES[e.profile]||e.profile) + '</div>' +
-        '<div style="font-size:.6rem;color:var(--fg3);margin-top:2px;font-family:Fira Code,monospace">#' + e.idx + ' · ' + e.type + '</div>' +
-        '<div style="font-size:.58rem;color:var(--fg3);margin-top:1px;font-family:Fira Code,monospace">' + e.ts_pub + '</div>' +
-      '</div>' +
-      '<div style="font-size:.55rem;color:var(--fg3);flex-shrink:0;padding-top:2px;font-family:Fira Code,monospace">' + e.ts + '</div>';
-    el.onclick = function() {
-      selProf(e.profile);
-      mobCloseHist();
-      setTimeout(function() {
-        var idx = findSnapInQueue(e.profile, e.idx);
-        if (idx >= 0) { playAt(idx); mobTabHome(); }
-        else { mobTabSnaps(); }
-      }, 80);
-    };
-    cont.appendChild(el);
+
+  // Onglets
+  var tabs = document.createElement('div');
+  tabs.className = 'mob-hist-tabs';
+  ['Snaps','Reprendre'].forEach(function(label) {
+    var tab = document.createElement('div');
+    tab.className = 'mob-hist-tab' + (mobHistTab===label.toLowerCase()?' on':'');
+    tab.textContent = label;
+    tab.onclick = function() { mobHistTab=label.toLowerCase(); mobBuildHist(); };
+    tabs.appendChild(tab);
   });
+  cont.appendChild(tabs);
+
+  var body = document.createElement('div');
+  body.style.cssText = 'overflow-y:auto;flex:1';
+
+  if (mobHistTab === 'snaps') {
+    // ── Onglet Snaps : historique des nouveaux snaps + filtre notifs ──
+    var notifTitle = document.createElement('div');
+    notifTitle.style.cssText = 'padding:10px 18px 6px;font-size:.65rem;font-weight:800;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em';
+    notifTitle.textContent = 'Notifications par profil';
+    body.appendChild(notifTitle);
+
+    PROFS.forEach(function(p) {
+      var on = !!mobNotifEnabled[p];
+      var row = document.createElement('div');
+      row.className = 'mob-notif-row';
+      row.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;flex:1">' +
+          '<div class="av" style="width:32px;height:32px;font-size:.75rem">'+avHtml(p)+'</div>'+
+          '<div>'+
+            '<div class="mob-notif-lbl">'+(NAMES[p]||p)+'</div>'+
+            '<div class="mob-notif-sub">'+(on?'Notif active':'Notif inactive')+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="mob-notif-tgl'+(on?' on':'')+'" id="mob-ntgl-'+p+'" data-p="'+p+'"></div>';
+      row.querySelector('.mob-notif-tgl').onclick = function() {
+        var pp = this.dataset.p;
+        mobNotifEnabled[pp] = !mobNotifEnabled[pp];
+        saveMobNotif();
+        mobBuildHist();
+      };
+      body.appendChild(row);
+    });
+
+    // Historique des snaps notifiés
+    if (logs.length) {
+      var histTitle = document.createElement('div');
+      histTitle.style.cssText = 'padding:12px 18px 6px;font-size:.65rem;font-weight:800;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;border-top:1px solid var(--border);margin-top:6px';
+      histTitle.textContent = 'Derniers nouveaux snaps';
+      body.appendChild(histTitle);
+      logs.slice().reverse().slice(0,20).forEach(function(e) {
+        var el = document.createElement('div');
+        el.className = 'mob-pi';
+        el.style.cssText = 'align-items:center;gap:10px;padding:8px 16px';
+        var prevH = e.preview
+          ? '<img src="'+e.preview+'" style="width:32px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)" loading="lazy">'
+          : '<div style="width:32px;height:44px;border-radius:6px;background:var(--ink4);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--green)">N</div>';
+        el.innerHTML = prevH +
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:.78rem;font-weight:800">'+(NAMES[e.profile]||e.profile)+'</div>'+
+            '<div style="font-size:.58rem;color:var(--fg3);font-family:Fira Code,monospace">#'+e.idx+' · '+e.type+'</div>'+
+          '</div>'+
+          '<div style="font-size:.52rem;color:var(--fg3);font-family:Fira Code,monospace">'+e.ts+'</div>';
+        el.onclick = function() {
+          selProf(e.profile); mobCloseHist();
+          setTimeout(function() {
+            var idx=findSnapInQueue(e.profile,e.idx);
+            if(idx>=0){playAt(idx);mobTabHome();}else{mobTabSnaps();}
+          },80);
+        };
+        body.appendChild(el);
+      });
+    } else {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'padding:20px;text-align:center;font-size:.72rem;color:var(--fg3)';
+      empty.textContent = 'Aucun snap reçu pour le moment';
+      body.appendChild(empty);
+    }
+
+  } else {
+    // ── Onglet Reprendre ──
+    var sessions = getAllResumeSessions();
+    if (!sessions.length) {
+      var empty2 = document.createElement('div');
+      empty2.style.cssText = 'padding:36px 20px;text-align:center;font-size:.75rem;color:var(--fg3);line-height:1.6';
+      empty2.innerHTML = 'Aucun snap à reprendre<br><span style="font-size:.65rem">Les snaps que tu quittes en cours apparaissent ici</span>';
+      body.appendChild(empty2);
+    } else {
+      sessions.forEach(function(item) {
+        var p = item.profile; var sess = item.sess;
+        var el = document.createElement('div');
+        el.className = 'mob-resume-item';
+        var thumbH = sess.preview
+          ? '<img src="'+sess.preview+'" class="mob-resume-thumb">'
+          : '<div class="mob-resume-ph">&#9654;</div>';
+        el.innerHTML =
+          thumbH +
+          '<div class="mob-resume-info">'+
+            '<div class="mob-resume-name">'+(NAMES[p]||p)+'</div>'+
+            '<div class="mob-resume-detail">Snap #'+sess.snap_index+(sess.ts_name?' · '+sess.ts_name:'')+'</div>'+
+          '</div>'+
+          '<div style="font-size:.7rem;font-weight:900;color:var(--hi);padding-left:6px;flex-shrink:0">&#8250;</div>';
+        el.onclick = function() {
+          selProf(p); mobCloseHist();
+          setTimeout(function() {
+            var idx=findSnapInQueue(p,sess.snap_index);
+            if(idx>=0){playAt(idx);mobTabHome();}else{mobTabSnaps();}
+          },80);
+        };
+        body.appendChild(el);
+      });
+    }
+  }
+  cont.appendChild(body);
 }
 
 function mobCloseHist() {

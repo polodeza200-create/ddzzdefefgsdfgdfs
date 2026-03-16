@@ -2169,7 +2169,13 @@ function buildMobDayFilter() {
     var on = !mobDayProfFilter[p];
     var chip = document.createElement('button');
     chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;font-size:.62rem;font-weight:800;border:1px solid;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:all .12s;' + (on?'background:rgba(86,207,255,.12);color:var(--hi);border-color:rgba(86,207,255,.3)':'background:transparent;color:var(--fg3);border-color:var(--border2)');
-    chip.innerHTML = '<div style="width:16px;height:16px;border-radius:50%;overflow:hidden;flex-shrink:0">'+avHtml(p)+'</div>'+(NAMES[p]||p);
+    var avSrc = AVATARS[p] || '';
+    var ini = (NAMES[p]||p)[0];
+    var avDiv = document.createElement('div');
+    avDiv.style.cssText = 'width:18px;height:18px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--ink4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:900';
+    if (avSrc) { var img=document.createElement('img'); img.src=avSrc; img.style.cssText='width:100%;height:100%;object-fit:cover'; avDiv.appendChild(img); } else { avDiv.textContent=ini; }
+    chip.appendChild(avDiv);
+    chip.appendChild(document.createTextNode(NAMES[p]||p));
     chip.onclick = function() {
       mobDayProfFilter[p] = on; // toggle
       applyMobDayFilter();
@@ -2343,13 +2349,17 @@ function mobBuildHist() {
             '<div style="font-size:.58rem;color:var(--fg3);font-family:Fira Code,monospace">#'+e.idx+' · '+e.type+'</div>'+
           '</div>'+
           '<div style="font-size:.52rem;color:var(--fg3);font-family:Fira Code,monospace">'+e.ts+'</div>';
-        el.onclick = function() {
-          selProf(e.profile); mobCloseHist();
-          setTimeout(function() {
-            var idx=findSnapInQueue(e.profile,e.idx);
-            if(idx>=0){playAt(idx);mobTabHome();}else{mobTabSnaps();}
-          },80);
-        };
+        (function(prof, snapIdx) {
+          el.onclick = function() {
+            mobCloseHist();
+            // Charger les snaps du profil puis jouer
+            selProf(prof);
+            setTimeout(function() {
+              var idx = findSnapInQueue(prof, snapIdx);
+              if (idx >= 0) { playAt(idx); mobTabHome(); }
+            }, 100);
+          };
+        })(e.profile, e.idx);
         body.appendChild(el);
       });
     } else {
@@ -2393,13 +2403,16 @@ function mobBuildHist() {
           '</div>'+
           '<div style="font-size:.7rem;font-weight:900;color:var(--hi);padding-left:6px;flex-shrink:0">&#8250;</div>';
         el.appendChild(delBtn);
-        el.onclick = function() {
-          selProf(p); mobCloseHist();
-          setTimeout(function() {
-            var idx=findSnapInQueue(p,sess.snap_index);
-            if(idx>=0){playAt(idx);mobTabHome();}else{mobTabSnaps();}
-          },80);
-        };
+        (function(pp, ss) {
+          el.onclick = function() {
+            mobCloseHist();
+            selProf(pp);
+            setTimeout(function() {
+              var idx = findSnapInQueue(pp, ss.snap_index);
+              if (idx >= 0) { playAt(idx); mobTabHome(); }
+            }, 100);
+          };
+        })(p, sess);
         body.appendChild(el);
       });
     }

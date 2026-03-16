@@ -873,6 +873,19 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
 .mob-drawer,.mob-snap-drawer{display:none}
 
 @media(max-width:768px){
+  @media(orientation:landscape){
+    .mob-orientation-lock{
+      display:flex!important;
+      position:fixed;inset:0;z-index:99999;
+      background:var(--ink);
+      flex-direction:column;
+      align-items:center;justify-content:center;
+      gap:16px;color:var(--fg2);font-size:.9rem;font-weight:700;
+    }
+    .mob-orientation-icon{font-size:2.5rem;animation:rotateHint 1.5s ease infinite}
+    @keyframes rotateHint{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-90deg)}}
+    .shell,.mob-nav,.mob-drawer,.mob-snap-drawer{display:none!important}
+  }
   .panel{display:none!important}
   .snap-col{display:none!important}
   .arr{display:none!important}
@@ -1891,6 +1904,11 @@ if ('ontouchstart' in window) {
   setTimeout(checkWelcomeBack, 800);
 }
 
+// Bloquer l'orientation paysage sur mobile
+if ('ontouchstart' in window && screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('portrait').catch(function(){});
+}
+
 /* ══════════════════════════════════════════════
    MOBILE NAV
    ══════════════════════════════════════════════ */
@@ -1933,76 +1951,67 @@ playAt = function(i) {
 var mobDayMode = null;
 var mobDayFilterProfs = {}; // profils exclus du filtre jour
 
+var mobDayMode = null;
+var mobDayFilterProfs = {};
+// Filtre catégorie mobile
+var mobCatFilter = 'all';
+
 function mobBuildProfs() {
   var cont = document.getElementById('mob-prof-list');
   if (!cont) return;
   cont.innerHTML = '';
 
-  // ── Section Aujourd'hui / Hier ──
-  var daySection = document.createElement('div');
-  daySection.style.cssText = 'padding:10px 16px 6px';
-
-  // Boutons Aujourd'hui / Hier
-  var dayBtns = document.createElement('div');
-  dayBtns.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
-  ['Aujourd\'hui','Hier'].forEach(function(label, idx) {
-    var mode = idx===0 ? 'today' : 'hier';
+  // ── Aujourd'hui / Hier (accès rapide, affiche tous les snaps du jour) ──
+  var dayRow = document.createElement('div');
+  dayRow.style.cssText = 'display:flex;gap:8px;padding:10px 16px 8px';
+  [["Aujourd'hui", TODAY_B], ["Hier", YEST_B]].forEach(function(pair) {
+    var label = pair[0], bounds = pair[1];
+    var cnt = 0;
+    PROFS.forEach(function(p){ (ALL[p]||[]).forEach(function(s){ if(inBounds(s,bounds)) cnt++; }); });
     var btn = document.createElement('button');
-    btn.className = 'mob-df-btn' + (mobDayMode===mode?' on':'');
-    btn.textContent = label;
+    btn.style.cssText = 'flex:1;padding:10px 6px;border-radius:12px;background:var(--ink3);border:1px solid var(--border);color:var(--fg);font-size:.78rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;-webkit-tap-highlight-color:transparent';
+    btn.innerHTML = '<span>' + label + '</span><span style="font-size:.6rem;color:var(--hi);font-family:Fira Code,monospace">' + cnt + ' snaps</span>';
     btn.onclick = function() {
-      mobDayMode = mobDayMode===mode ? null : mode;
-      mobBuildProfs();
-    };
-    dayBtns.appendChild(btn);
-  });
-  daySection.appendChild(dayBtns);
-
-  // Si mode jour actif : afficher les filtres profils
-  if (mobDayMode) {
-    var bounds = mobDayMode==='today' ? TODAY_B : YEST_B;
-    var filterWrap = document.createElement('div');
-    filterWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px';
-    PROFS.forEach(function(p) {
-      var excluded = !!mobDayFilterProfs[p];
-      var chip = document.createElement('button');
-      chip.className = 'mob-df-btn' + (excluded?'':' on');
-      chip.innerHTML = '<div style="display:inline-flex;align-items:center;gap:4px"><div style="width:14px;height:14px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--ink4)">' + avHtml(p) + '</div>' + (NAMES[p]||p) + '</div>';
-      chip.onclick = function(e) {
-        e.stopPropagation();
-        mobDayFilterProfs[p] = !mobDayFilterProfs[p];
-        mobBuildProfs();
-      };
-      filterWrap.appendChild(chip);
-    });
-    daySection.appendChild(filterWrap);
-
-    var goBtn = document.createElement('button');
-    goBtn.style.cssText = 'width:100%;padding:10px;border-radius:12px;background:var(--hi);color:var(--ink);font-size:.8rem;font-weight:900;border:none;cursor:pointer;margin-top:2px';
-    goBtn.textContent = 'Voir ' + (mobDayMode==='today'?"Aujourd'hui":'Hier');
-    goBtn.onclick = function() {
       qMode='today'; qi=-1;
       var snaps=[];
-      PROFS.forEach(function(p){ if(!mobDayFilterProfs[p]) (ALL[p]||[]).forEach(function(s){ if(inBounds(s,bounds)) snaps.push(s); }); });
+      PROFS.forEach(function(p){ (ALL[p]||[]).forEach(function(s){ if(inBounds(s,bounds)) snaps.push(s); }); });
       snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
       queue=snaps; filt='all'; srt='chrono'; resetFilterBtns();
       buildSnapList(snaps,true);
-      scTitle.textContent=mobDayMode==='today'?"Aujourd'hui":"Hier";
-      scCnt.textContent=snaps.length+' snaps';
+      scTitle.textContent=label; scCnt.textContent=snaps.length+' snaps';
       mobCloseProfs();
       setTimeout(function(){ mobTabSnaps(); },80);
     };
-    daySection.appendChild(goBtn);
-  }
-  cont.appendChild(daySection);
+    dayRow.appendChild(btn);
+  });
+  cont.appendChild(dayRow);
+
+  // ── Filtre catégorie (comme PC) ──
+  var catRow = document.createElement('div');
+  catRow.style.cssText = 'display:flex;gap:5px;padding:0 16px 8px;overflow-x:auto';
+  catRow.style.cssText += ';scrollbar-width:none';
+  var allCats = ['all'];
+  Object.values(CATS).forEach(function(c){ if(allCats.indexOf(c)<0) allCats.push(c); });
+  allCats.forEach(function(cat) {
+    var chip = document.createElement('button');
+    chip.className = 'mob-df-btn' + (mobCatFilter===cat?' on':'');
+    chip.textContent = cat==='all'?'Tous':cat;
+    chip.onclick = function() {
+      mobCatFilter = cat;
+      mobBuildProfs();
+    };
+    catRow.appendChild(chip);
+  });
+  cont.appendChild(catRow);
 
   // Séparateur
   var sep = document.createElement('div');
-  sep.style.cssText = 'height:1px;background:var(--border);margin:0 0 4px';
+  sep.style.cssText = 'height:1px;background:var(--border);margin-bottom:4px';
   cont.appendChild(sep);
 
-  // ── Liste profils ──
+  // ── Liste profils (filtrée par catégorie) ──
   PROFS.forEach(function(p) {
+    if (mobCatFilter !== 'all' && CATS[p] !== mobCatFilter) return;
     var snaps = ALL[p] || [];
     var el = document.createElement('div');
     el.className = 'mob-pi' + (p===curProf?' on':'');
@@ -2252,6 +2261,16 @@ function mobBuildHist() {
         var thumbH = sess.preview
           ? '<img src="'+sess.preview+'" class="mob-resume-thumb">'
           : '<div class="mob-resume-ph">&#9654;</div>';
+        var delBtn = document.createElement('button');
+        delBtn.style.cssText = 'width:28px;height:28px;border-radius:50%;background:var(--ink4);border:1px solid var(--border);color:var(--fg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.7rem';
+        delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:12px;height:12px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        (function(pp) {
+          delBtn.onclick = function(e) {
+            e.stopPropagation();
+            clearSessionForProfile(pp);
+            mobBuildHist();
+          };
+        })(p);
         el.innerHTML =
           thumbH +
           '<div class="mob-resume-info">'+
@@ -2259,6 +2278,7 @@ function mobBuildHist() {
             '<div class="mob-resume-detail">Snap #'+sess.snap_index+(sess.ts_name?' · '+sess.ts_name:'')+'</div>'+
           '</div>'+
           '<div style="font-size:.7rem;font-weight:900;color:var(--hi);padding-left:6px;flex-shrink:0">&#8250;</div>';
+        el.appendChild(delBtn);
         el.onclick = function() {
           selProf(p); mobCloseHist();
           setTimeout(function() {
@@ -2351,7 +2371,7 @@ buildProfiles = function() {
     html = (
         "<!DOCTYPE html>\n<html lang='fr'>\n<head>\n"
         "<meta charset='UTF-8'>"
-        "<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'><meta name='screen-orientation' content='portrait'>"
         "<title>Team Nasdas Life</title>"
         "<style>" + css + "</style>"
         "</head>\n<body>\n"

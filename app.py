@@ -31,6 +31,7 @@ PROFILES = [
     "mdm-78130",
     "chikaaanos",
     "brahimmd31",
+    "brahimlepain",
     "samos-officiel",
     "h78amza",
     "reineminnesota",
@@ -50,6 +51,7 @@ PROFILE_CATEGORIES = {
     "mdm-78130":       "Daily",
     "chikaaanos":      "Daily",
     "brahimmd31":      "Daily",
+    "brahimlepain":    "Daily",
     "samos-officiel":  "Music",
     "h78amza":         "Daily",
     "reineminnesota":  "Daily",
@@ -69,6 +71,7 @@ PROFILE_NAMES = {
     "mdm-78130":       "Canette",
     "chikaaanos":      "Chikanos",
     "brahimmd31":      "Brahim",
+    "brahimlepain":    "Brahim",
     "samos-officiel":  "Samos",
     "h78amza":         "Hamza",
     "reineminnesota":  "Minnesota",
@@ -77,6 +80,12 @@ PROFILE_NAMES = {
     "bizonblanc66777": "Bizon Blanc",
     "userr_n6":        "Naomi",
     "user134783967":   "Luna",
+}
+
+# Profils fusionnés dans l'affichage : {alias: [profil1, profil2]}
+# L'alias utilise le profil1 comme référence (nom + avatar)
+PROFILE_GROUPS = {
+    "brahimmd31": ["brahimmd31", "brahimlepain"],
 }
 
 REFRESH_INTERVAL = 30
@@ -586,6 +595,7 @@ def generate_html(states: list) -> str:
     avatars_js     = json.dumps(avatars_data,        ensure_ascii=False)
     categories_js  = json.dumps(PROFILE_CATEGORIES,  ensure_ascii=False)
     names_js       = json.dumps(PROFILE_NAMES,        ensure_ascii=False)
+    groups_js      = json.dumps(PROFILE_GROUPS,        ensure_ascii=False)
     new_logs_js    = json.dumps(new_logs_data,         ensure_ascii=False)
     today_str      = json.dumps(today.strftime("%d/%m/%Y"))
     yesterday_str  = json.dumps(yesterday.strftime("%d/%m/%Y"))
@@ -1157,6 +1167,40 @@ var PROFS   = __PROFILES__;
 var AVATARS = __AVATARS__;
 var CATS    = __CATEGORIES__;
 var NAMES   = __NAMES__;
+var GROUPS  = __GROUPS__;
+
+// Calculer la map inverse : profil -> profil principal du groupe
+var GROUP_LEADER = {};
+Object.keys(GROUPS).forEach(function(leader) {
+  GROUPS[leader].forEach(function(p) { GROUP_LEADER[p] = leader; });
+});
+
+// Fusionner les snaps de tous les profils d'un groupe sous le leader
+function getMergedSnaps(leader) {
+  var members = GROUPS[leader] || [leader];
+  var all = [];
+  members.forEach(function(p) {
+    (ALL[p]||[]).forEach(function(s) {
+      var sc = Object.assign ? Object.assign({}, s) : JSON.parse(JSON.stringify(s));
+      sc._origProfile = sc.profile;
+      sc.profile = leader; // remap vers le leader pour l'affichage
+      all.push(sc);
+    });
+  });
+  all.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
+  return all;
+}
+
+// Obtenir la liste des profils à afficher (dédupliqués par groupe)
+function getDisplayProfs() {
+  var seen = {};
+  var result = [];
+  PROFS.forEach(function(p) {
+    var leader = GROUP_LEADER[p] || p;
+    if (!seen[leader]) { seen[leader]=1; result.push(leader); }
+  });
+  return result;
+}
 var NLOGS   = __NEW_LOGS__;
 var LB      = __LB_ROWS__;
 var TODAY_S = __TODAY_STR__;
@@ -1389,7 +1433,7 @@ function selProf(p) {
   var b = document.getElementById('pib-' + p);
   if (b) b.style.display = 'none';
   updBadge();
-  var snaps = ALL[p] || [];
+  var snaps = GROUPS[p] ? getMergedSnaps(p) : (ALL[p] || []);
   queue = snaps.slice();
   filt = 'all'; srt = 'chrono';
   resetFilterBtns();
@@ -2142,9 +2186,9 @@ function mobBuildProfs() {
   cont.appendChild(sep);
 
   // ── Liste profils (filtrée par catégorie) ──
-  PROFS.forEach(function(p) {
+  getDisplayProfs().forEach(function(p) {
     if (mobCatFilter !== 'all' && CATS[p] !== mobCatFilter) return;
-    var snaps = ALL[p] || [];
+    var snaps = GROUPS[p] ? getMergedSnaps(p) : (ALL[p] || []);
     var el = document.createElement('div');
     el.className = 'mob-pi' + (p===curProf?' on':'');
     el.innerHTML =
@@ -2675,6 +2719,7 @@ buildProfiles = function() {
         .replace("__AVATARS__",      avatars_js)
         .replace("__CATEGORIES__",   categories_js)
         .replace("__NAMES__",        names_js)
+        .replace("__GROUPS__",       groups_js)
         .replace("__NEW_LOGS__",     new_logs_js)
         .replace("__LB_ROWS__",      lb_js)
         .replace("__TODAY_STR__",    today_str)

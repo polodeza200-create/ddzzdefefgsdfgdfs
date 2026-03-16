@@ -35,6 +35,10 @@ PROFILES = [
     "h78amza",
     "reineminnesota",
     "leyna.latina",
+    "tounsi.teamns",
+    "bizonblanc66777",
+    "userr_n6",
+    "user134783967",
 ]
 
 PROFILE_CATEGORIES = {
@@ -50,6 +54,10 @@ PROFILE_CATEGORIES = {
     "h78amza":         "Daily",
     "reineminnesota":  "Daily",
     "leyna.latina":    "Lifestyle",
+    "tounsi.teamns":   "Daily",
+    "bizonblanc66777": "Daily",
+    "userr_n6":        "Lifestyle",
+    "user134783967":   "Lifestyle",
 }
 
 PROFILE_NAMES = {
@@ -65,6 +73,10 @@ PROFILE_NAMES = {
     "h78amza":         "Hamza",
     "reineminnesota":  "Minnesota",
     "leyna.latina":    "Leyna",
+    "tounsi.teamns":   "Tounsi",
+    "bizonblanc66777": "Bizon Blanc",
+    "userr_n6":        "Naomi",
+    "user134783967":   "Luna",
 }
 
 REFRESH_INTERVAL = 30

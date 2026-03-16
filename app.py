@@ -1187,6 +1187,7 @@ var srt     = 'chrono';
 var newCnts = {};
 var logs    = [];
 var imgT    = null;
+var imgPaused = false;
 var idxT    = null;
 var lastUpdated = 0;
 
@@ -1530,6 +1531,7 @@ function playAt(i) {
     mv.pause(); mv.src=''; mv.style.display='none';
     mi.style.display='block';
     mi.src = s.url || s.preview;
+    imgPaused = false;
     setTimeout(function(){
       pf.style.transition='width 3s linear'; pf.style.width='100%';
     }, 50);
@@ -1562,7 +1564,20 @@ pbar.onclick = function(e){
 };
 
 bPause.onclick = function(){
-  if (mv.style.display!=='none') { mv.paused?mv.play().catch(function(){}):mv.pause(); }
+  if (mv.style.display!=='none') {
+    mv.paused?mv.play().catch(function(){}):mv.pause();
+  } else if (mi.style.display!=='none') {
+    imgPaused = !imgPaused;
+    if (imgPaused) {
+      clearTimeout(imgT); imgT=null;
+      pf.style.transition='none';
+      bPause.textContent='>';
+    } else {
+      bPause.textContent='II';
+      pf.style.transition='width 2s linear'; pf.style.width='100%';
+      imgT=setTimeout(function(){ if(!imgPaused) navNext(); },2100);
+    }
+  }
 };
 
 /* ── fullscreen ── */
@@ -1842,10 +1857,11 @@ function saveSession() {
   try {
     var snap_counts = {};
     PROFS.forEach(function(p){ snap_counts[p] = (ALL[p]||[]).length; });
-    // Charger sessions existantes et mettre à jour uniquement le profil en cours
     var existing = {};
     try { existing = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch(e2){}
-    existing[s.profile] = {
+    // Une seule entrée globale : le dernier snap regardé
+    existing['__last__'] = {
+      profile:    s.profile,
       snap_index: s.index,
       snap_ts:    s.ts_unix,
       preview:    s.preview || '',
@@ -1874,7 +1890,10 @@ function clearSessionForProfile(profile) {
     var raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return;
     var data = JSON.parse(raw);
-    delete data[profile];
+    // Supprimer l'entrée unique si elle concerne ce profil (ou si profile=null = tout supprimer)
+    if (!profile || (data['__last__'] && data['__last__'].profile === profile)) {
+      delete data['__last__'];
+    }
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
   } catch(e) {}
 }
@@ -2172,11 +2191,7 @@ function buildMobDayFilter() {
   row.appendChild(allChip);
 
   PROFS.forEach(function(p) {
-    // N'afficher que les profils qui ont des snaps dans le jour actif
-    if (mobActiveBounds) {
-      var hasBound = (ALL[p]||[]).some(function(s){ return inBounds(s, mobActiveBounds); });
-      if (!hasBound) return;
-    }
+    // Afficher tous les profils dans le filtre
     var on = !mobDayProfFilter[p];
     var chip = document.createElement('button');
     chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;font-size:.62rem;font-weight:800;border:1px solid;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:all .12s;' + (on?'background:rgba(86,207,255,.12);color:var(--hi);border-color:rgba(86,207,255,.3)':'background:transparent;color:var(--fg3);border-color:var(--border2)');
@@ -2316,14 +2331,11 @@ function getAllResumeSessions() {
     var raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return [];
     var data = JSON.parse(raw);
-    var list = [];
-    PROFS.forEach(function(p) {
-      if (data[p] && data[p].snap_index !== undefined) {
-        var age = Date.now() - (data[p].saved_at||0);
-        if (age < 7*86400000) list.push({profile:p, sess:data[p]});
-      }
-    });
-    return list;
+    var last = data['__last__'];
+    if (!last || last.snap_index === undefined) return [];
+    var age = Date.now() - (last.saved_at||0);
+    if (age > 7*86400000) return [];
+    return [{ profile: last.profile, sess: last }];
   } catch(e) { return []; }
 }
 
@@ -2476,30 +2488,28 @@ function mobBuildHist() {
           el.onclick = function() {
             mobCloseHist();
             if (ss.ctx_mode === 'today' && ss.ctx_bounds) {
-              // Restaurer contexte jour
-              qMode = 'today'; qi = -1;
-              mobActiveBounds = ss.ctx_bounds;
-              mobActiveLabel  = ss.ctx_label || '';
-              var snaps = [];
+              qMode='today'; qi=-1;
+              mobActiveBounds=ss.ctx_bounds; mobActiveLabel=ss.ctx_label||'';
+              var snaps=[];
               PROFS.forEach(function(p2){
-                (ALL[p2]||[]).forEach(function(s2){ if(inBounds(s2, ss.ctx_bounds)) snaps.push(s2); });
+                (ALL[p2]||[]).forEach(function(s2){ if(inBounds(s2,ss.ctx_bounds)) snaps.push(s2); });
               });
               snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
-              queue = snaps; filt='all'; srt='chrono'; resetFilterBtns();
-              buildSnapList(snaps, true);
-              setTimeout(function() {
-                var idx = findSnapInQueue(pp, ss.snap_index);
-                if (idx >= 0) { playAt(idx); mobTabHome(); }
-              }, 80);
+              queue=snaps; filt='all'; srt='chrono'; resetFilterBtns();
+              buildSnapList(snaps,true);
+              setTimeout(function(){
+                var idx=findSnapInQueue(pp,ss.snap_index);
+                if(idx>=0){playAt(idx);mobTabHome();}
+              },80);
             } else {
               selProf(pp);
-              setTimeout(function() {
-                var idx = findSnapInQueue(pp, ss.snap_index);
-                if (idx >= 0) { playAt(idx); mobTabHome(); }
-              }, 100);
+              setTimeout(function(){
+                var idx=findSnapInQueue(pp,ss.snap_index);
+                if(idx>=0){playAt(idx);mobTabHome();}
+              },100);
             }
           };
-        })(p, sess);
+        })(item.profile, sess);
         body.appendChild(el);
       });
     }
@@ -2559,8 +2569,16 @@ buildProfiles = function() {
         mv.paused ? mv.play().catch(function(){}) : mv.pause();
       } else if (mi.style.display !== 'none') {
         // Image : toggle pause
-        if (imgT) { clearTimeout(imgT); imgT = null; }
-        else { imgT = setTimeout(function(){ navNext(); }, 2000); }
+        imgPaused = !imgPaused;
+        if (imgPaused) {
+          clearTimeout(imgT); imgT = null;
+          pf.style.transition = 'none';
+          bPause.textContent = '>';
+        } else {
+          bPause.textContent = 'II';
+          pf.style.transition = 'width 2s linear'; pf.style.width = '100%';
+          imgT = setTimeout(function(){ if(!imgPaused && qi===qi) navNext(); }, 2100);
+        }
       }
     }
   });

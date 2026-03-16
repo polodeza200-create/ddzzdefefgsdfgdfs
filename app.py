@@ -947,7 +947,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
     padding:0 4px;
   }
 
-  /* tap zones désactivées sur mobile — swipe uniquement */
+  /* tap zones cachées — on gere via click direct sur le stage */
   .tap-zone{display:none!important}
   .tap-center{display:none!important}
 
@@ -955,8 +955,9 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
   #today-chip{display:flex}
 
   /* contrôles vidéo */
-  .snap-bot{opacity:1!important;padding:8px 12px 10px}
+  .snap-bot{display:none!important}
   .snap-top{padding:10px 12px 8px}
+  #snap-badge{display:none!important}
 
   /* Drawers = position:fixed, z-index élevé */
   .mob-drawer,.mob-snap-drawer{
@@ -1814,14 +1815,58 @@ function showResumeModal(profile, sess) {
 var _origSelProf = selProf;
 selProf = function(p) {
   _origSelProf(p);
-  // Après avoir chargé le profil, vérifier s'il y a une session sauvegardée
   var sess = loadSessionForProfile(p);
   if (!sess) return;
   var age = Date.now() - (sess.saved_at || 0);
   if (age > 86400000) { clearSessionForProfile(p); return; }
-  // Afficher le modal avec un léger délai pour que la liste soit rendue
   setTimeout(function() { showResumeModal(p, sess); }, 80);
 };
+
+/* Welcome back : afficher uniquement si nouveaux snaps depuis dernière visite */
+function checkWelcomeBack() {
+  try {
+    var raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    var oldCounts = data['__counts__'] || {};
+    var news = [];
+    PROFS.forEach(function(p) {
+      var oldCount = oldCounts[p] || 0;
+      var newCount = (ALL[p] || []).length;
+      if (newCount > oldCount) news.push({profile:p, diff:newCount-oldCount});
+    });
+    if (!news.length) return; // Pas de nouveaux snaps = rien afficher
+    showWelcomeBackMobile(news);
+  } catch(e) {}
+}
+
+function showWelcomeBackMobile(news) {
+  if (isNoResume('__welcome__')) return;
+  var overlay = document.createElement('div');
+  overlay.className = 'wb-overlay';
+  var newsHtml = news.map(function(n) {
+    return "<div class=\"wb-news-item\">" +
+      "<div class=\"wb-news-av\">" + avHtml(n.profile) + "</div>" +
+      "<div class=\"wb-news-txt\"><b>" + (NAMES[n.profile]||n.profile) + "</b> a posté</div>" +
+      "<div class=\"wb-news-cnt\">+" + n.diff + "</div></div>";
+  }).join('');
+  overlay.innerHTML =
+    "<div class=\"wb-card\">" +
+      "<div class=\"wb-title\">Nouveaux snaps</div>" +
+      "<div class=\"wb-sub\">Pendant ton absence :</div>" +
+      "<div class=\"wb-news\">" + newsHtml + "</div>" +
+      "<div class=\"wb-no-show-row\"><label class=\"wb-chk-label\"><input type=\"checkbox\" id=\"wb-welcome-chk\"> Ne plus afficher</label></div>" +
+      "<div class=\"wb-btns\"><button class=\"wb-btn yes\" id=\"wb-ok\">OK</button></div>" +
+    "</div>";
+  document.body.appendChild(overlay);
+  document.getElementById('wb-ok').onclick = function() {
+    var chk = document.getElementById('wb-welcome-chk');
+    if (chk && chk.checked) setNoResume('__welcome__', true);
+    overlay.classList.add('hide');
+    setTimeout(function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 200);
+  };
+  overlay.onclick = function(e){ if(e.target===overlay) document.getElementById('wb-ok').click(); };
+}
 
 window.addEventListener('beforeunload', saveSession);
 window.addEventListener('pagehide',     saveSession);
@@ -1837,6 +1882,11 @@ buildTodayExclPanel();
 // Aucun profil sélectionné au démarrage
 
 setTimeout(fetchLiveData, 5000);
+
+// Welcome back uniquement si nouveaux snaps
+if ('ontouchstart' in window) {
+  setTimeout(checkWelcomeBack, 800);
+}
 
 /* ══════════════════════════════════════════════
    MOBILE NAV
@@ -1886,13 +1936,37 @@ function mobBuildProfs() {
   var todayCnt = getToday().length;
   todayEl.innerHTML =
     "<div class=\"av\" style=\"background:rgba(86,207,255,.12);border-color:rgba(86,207,255,.3)\">&#x1F4C5;</div>" +
-    "<div class=\"mob-pi-info\"><div class=\"mob-pi-name\" style=\"color:var(--hi)\">Today</div><div class=\"mob-pi-sub\">" + todayCnt + " snaps</div></div>";
+    "<div class=\"mob-pi-info\"><div class=\"mob-pi-name\" style=\"color:var(--hi)\">Aujourd'hui</div><div class=\"mob-pi-sub\">" + todayCnt + " snaps</div></div>";
   todayEl.onclick = function() {
     todayMode();
     mobCloseProfs();
     setTimeout(function(){ mobTabSnaps(); }, 80);
   };
   cont.appendChild(todayEl);
+  // Item Hier
+  var hierEl = document.createElement('div');
+  hierEl.className = 'mob-pi';
+  var hierSnaps = [];
+  PROFS.forEach(function(p){ (ALL[p]||[]).forEach(function(s){ if(inBounds(s,YEST_B)) hierSnaps.push(s); }); });
+  var hierCnt = hierSnaps.length;
+  hierEl.innerHTML =
+    "<div class=\"av\" style=\"background:rgba(86,207,255,.06);border-color:rgba(86,207,255,.15)\">&#x23F3;</div>" +
+    "<div class=\"mob-pi-info\"><div class=\"mob-pi-name\">Hier</div><div class=\"mob-pi-sub\">" + hierCnt + " snaps</div></div>";
+  hierEl.onclick = function() {
+    // Mode hier : comme todayMode mais avec YEST_B
+    qMode = 'today'; qi = -1;
+    document.querySelectorAll('.pi').forEach(function(el){ el.classList.remove('on'); });
+    document.getElementById('today-chip').classList.add('on');
+    var snaps = [];
+    PROFS.forEach(function(p){ if(!todayExcluded[p]) (ALL[p]||[]).forEach(function(s){ if(inBounds(s,YEST_B)) snaps.push(s); }); });
+    snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
+    queue = snaps; filt='all'; srt='chrono'; resetFilterBtns();
+    buildSnapList(snaps, true);
+    scTitle.textContent = "Hier"; scCnt.textContent = snaps.length + ' snaps';
+    mobCloseProfs();
+    setTimeout(function(){ mobTabSnaps(); }, 80);
+  };
+  cont.appendChild(hierEl);
   // Séparateur
   var sep = document.createElement('div');
   sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0';
@@ -1907,7 +1981,7 @@ function mobBuildProfs() {
         '<div class="mob-pi-name">' + (NAMES[p]||p) + '</div>' +
         '<div class="mob-pi-sub">' + snaps.length + ' snaps · ' + (CATS[p]||'') + '</div>' +
       '</div>' +
-      '<div class="mob-pi-badge" style="display:' + (newCnts[p]>0?'flex':'none') + '">' + (newCnts[p]||0) + '</div>';
+      '<div class="mob-pi-badge" id="mob-pib-' + p + '" style="display:' + (newCnts[p]>0?'flex':'none') + '">' + (newCnts[p]||0) + '</div>';
     el.onclick = function() {
       selProf(p);
       mobCloseProfs();
@@ -1922,9 +1996,18 @@ function mobUpdateBadge() {
   var total = Object.values(newCnts).reduce(function(a,b){return a+b;},0);
   var b = document.getElementById('mob-badge-profs');
   if (b) {
-    b.textContent = total;
+    b.textContent = total > 0 ? total : '';
     b.style.display = total > 0 ? 'flex' : 'none';
   }
+  // Mettre à jour les badges dans la liste profils si ouverte
+  PROFS.forEach(function(p) {
+    var badge = document.getElementById('mob-pib-' + p);
+    var cnt = newCnts[p] || 0;
+    if (badge) {
+      badge.textContent = cnt;
+      badge.style.display = cnt > 0 ? 'flex' : 'none';
+    }
+  });
 }
 
 function mobSetActiveTab(id) {
@@ -1935,8 +2018,9 @@ function mobSetActiveTab(id) {
 
 function mobTabHome() {
   mobSetActiveTab('mob-tab-home');
-  document.getElementById('mob-drawer-profs').classList.remove('open');
-  document.getElementById('mob-drawer-snaps').classList.remove('open');
+  ['mob-drawer-profs','mob-drawer-snaps','mob-drawer-lb','mob-drawer-hist'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.classList.remove('open');
+  });
 }
 
 function mobTabProfs() {
@@ -1967,9 +2051,92 @@ function mobTabLB() {
   mobSetActiveTab('mob-tab-lb');
   document.getElementById('mob-drawer-profs').classList.remove('open');
   document.getElementById('mob-drawer-snaps').classList.remove('open');
-  // Réutiliser le LB desktop dans une alerte simple ? Non : ouvrir le drawer profils en mode LB
-  mobBuildProfs();
-  document.getElementById('mob-drawer-profs').classList.add('open');
+  mobBuildLB();
+  document.getElementById('mob-drawer-lb').classList.add('open');
+}
+
+function mobBuildLB() {
+  var cont = document.getElementById('mob-lb-list');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var max = LB.reduce(function(m,r){ return Math.max(m,r[3]); }, 1);
+  LB.forEach(function(r) {
+    var p=r[0],name=r[1],rank=r[2],tot=r[3],vids=r[4],imgs=r[5],nw=r[6];
+    var pct = Math.round(tot/max*100);
+    var el = document.createElement('div');
+    el.className = 'lb-item';
+    el.style.margin = '4px 12px';
+    el.innerHTML =
+      '<div class="lb-top">' +
+        '<div class="lb-pos">#'+rank+'</div>' +
+        '<div class="lb-av">'+avHtml(p)+'</div>' +
+        '<div class="lb-name">'+name+'</div>' +
+        (nw>0?'<div class="lb-new">+'+nw+'</div>':'') +
+      '</div>' +
+      '<div class="lb-grid">' +
+        '<div class="lb-cell"><span class="lb-val">'+tot+'</span><span class="lb-lbl">snaps</span></div>' +
+        '<div class="lb-cell"><span class="lb-val" style="color:var(--hi)">'+vids+'</span><span class="lb-lbl">videos</span></div>' +
+        '<div class="lb-cell"><span class="lb-val" style="color:var(--fg2)">'+imgs+'</span><span class="lb-lbl">images</span></div>' +
+      '</div>' +
+      '<div class="lb-bar"><div class="lb-fill" style="width:'+pct+'%"></div></div>';
+    el.onclick = function(){ selProf(p); document.getElementById('mob-drawer-lb').classList.remove('open'); mobSetActiveTab('mob-tab-home'); };
+    cont.appendChild(el);
+  });
+}
+
+function mobCloseLB() {
+  document.getElementById('mob-drawer-lb').classList.remove('open');
+  mobSetActiveTab('mob-tab-home');
+}
+
+function mobTabHist() {
+  mobSetActiveTab('mob-tab-hist');
+  ['mob-drawer-profs','mob-drawer-snaps','mob-drawer-lb'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.classList.remove('open');
+  });
+  mobBuildHist();
+  document.getElementById('mob-drawer-hist').classList.add('open');
+}
+
+function mobBuildHist() {
+  var cont = document.getElementById('mob-hist-list');
+  if (!cont) return;
+  cont.innerHTML = '';
+  if (!logs.length) {
+    cont.innerHTML = '<div style="padding:28px;text-align:center;font-size:.75rem;color:var(--fg3)">Aucun historique</div>';
+    return;
+  }
+  logs.slice().reverse().forEach(function(e) {
+    var el = document.createElement('div');
+    el.className = 'mob-pi';
+    el.style.cssText = 'align-items:flex-start;gap:10px;padding:10px 16px';
+    var prevH = e.preview
+      ? '<img src="' + e.preview + '" style="width:36px;height:50px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)" loading="lazy">'
+      : '<div style="width:36px;height:50px;border-radius:6px;background:var(--ink4);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.8rem">' + (e.type==='VIDEO'?'&#127909;':'&#128247;') + '</div>';
+    el.innerHTML =
+      prevH +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:.82rem;font-weight:800">' + (NAMES[e.profile]||e.profile) + '</div>' +
+        '<div style="font-size:.6rem;color:var(--fg3);margin-top:2px;font-family:Fira Code,monospace">#' + e.idx + ' · ' + e.type + '</div>' +
+        '<div style="font-size:.58rem;color:var(--fg3);margin-top:1px;font-family:Fira Code,monospace">' + e.ts_pub + '</div>' +
+      '</div>' +
+      '<div style="font-size:.55rem;color:var(--fg3);flex-shrink:0;padding-top:2px;font-family:Fira Code,monospace">' + e.ts + '</div>';
+    el.onclick = function() {
+      selProf(e.profile);
+      mobCloseHist();
+      setTimeout(function() {
+        var idx = findSnapInQueue(e.profile, e.idx);
+        if (idx >= 0) { playAt(idx); mobTabHome(); }
+        else { mobTabSnaps(); }
+      }, 80);
+    };
+    cont.appendChild(el);
+  });
+}
+
+function mobCloseHist() {
+  document.getElementById('mob-drawer-hist').classList.remove('open');
+  mobSetActiveTab('mob-tab-home');
 }
 
 function mobCloseProfs() {
@@ -2000,39 +2167,30 @@ buildProfiles = function() {
   }
 };
 
-/* ── MOBILE : swipe + tap pause ── */
+/* ── MOBILE : tap gauche/milieu/droite ── */
 (function(){
   if (!('ontouchstart' in window)) return;
   var stage = document.getElementById('snap-stage');
   if (!stage) return;
-
-  var sx = 0, sy = 0, moved = false;
-
-  stage.addEventListener('touchstart', function(e){
-    sx = e.touches[0].clientX;
-    sy = e.touches[0].clientY;
-    moved = false;
-  }, {passive:true});
-
-  stage.addEventListener('touchmove', function(e){
-    var dx = Math.abs(e.touches[0].clientX - sx);
-    var dy = Math.abs(e.touches[0].clientY - sy);
-    if (dx > 8 || dy > 8) moved = true;
-  }, {passive:true});
-
-  stage.addEventListener('touchend', function(e){
-    var dx = e.changedTouches[0].clientX - sx;
-    var dy = e.changedTouches[0].clientY - sy;
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
-      // swipe horizontal -> changer snap
-      if (dx < 0) navNext(); else navPrev();
-    } else if (!moved) {
-      // tap simple -> pause/play
+  stage.addEventListener('click', function(e){
+    var w = stage.offsetWidth;
+    var x = e.clientX - stage.getBoundingClientRect().left;
+    var pct = x / w;
+    if (pct < 0.33) {
+      navPrev();
+    } else if (pct > 0.67) {
+      navNext();
+    } else {
+      // Milieu : pause/play video ou pause/reprendre image
       if (mv.style.display !== 'none') {
         mv.paused ? mv.play().catch(function(){}) : mv.pause();
+      } else if (mi.style.display !== 'none') {
+        // Image : toggle pause
+        if (imgT) { clearTimeout(imgT); imgT = null; }
+        else { imgT = setTimeout(function(){ navNext(); }, 2000); }
       }
     }
-  }, {passive:true});
+  });
 })();
 """
 
@@ -2163,7 +2321,7 @@ buildProfiles = function() {
         "<button class='mob-tab on' id='mob-tab-home' onclick='mobTabHome()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2'/></svg><span>Viewer</span></button>"
         "<button class='mob-tab' id='mob-tab-profs' onclick='mobTabProfs()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg><span class='mob-badge' id='mob-badge-profs'></span><span>Profils</span></button>"
         "<button class='mob-tab' id='mob-tab-snaps' onclick='mobTabSnaps()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='8' y1='6' x2='21' y2='6'/><line x1='8' y1='12' x2='21' y2='12'/><line x1='8' y1='18' x2='21' y2='18'/><line x1='3' y1='6' x2='3.01' y2='6'/><line x1='3' y1='12' x2='3.01' y2='12'/><line x1='3' y1='18' x2='3.01' y2='18'/></svg><span>Snaps</span></button>"
-        "<button class='mob-tab' id='mob-tab-lb' onclick='mobTabLB()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg><span>Top</span></button>"
+        "<button class='mob-tab' id='mob-tab-lb' onclick='mobTabLB()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/></svg><span>Classement</span></button><button class='mob-tab' id='mob-tab-hist' onclick='mobTabHist()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg><span>Historique</span></button>"
         "</nav>"
 
         "</div>\n"
@@ -2200,6 +2358,28 @@ buildProfiles = function() {
         "<button class='sb' id='mob-sort-desc' onclick='setSort(&quot;recent&quot;,this)'>&#8595; Récent</button>"
         "</div>"
         "<div class='mob-snaps-scroll' id='mob-snap-list'></div>"
+        "</div></div>"
+
+        # ── MOBILE LB DRAWER ──
+        "<div class='mob-snap-drawer' id='mob-drawer-lb' onclick='mobCloseDrawer(event,this)'>"
+        "<div class='mob-snap-sheet'>"
+        "<div class='mob-sheet-handle'></div>"
+        "<div class='mob-sheet-title'>"
+        "<span>Classement</span>"
+        "<button class='mob-sheet-close' onclick='mobCloseLB()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg></button>"
+        "</div>"
+        "<div class='mob-snaps-scroll' id='mob-lb-list'></div>"
+        "</div></div>"
+
+        # ── MOBILE HIST DRAWER ──
+        "<div class='mob-snap-drawer' id='mob-drawer-hist' onclick='mobCloseDrawer(event,this)'>"
+        "<div class='mob-snap-sheet'>"
+        "<div class='mob-sheet-handle'></div>"
+        "<div class='mob-sheet-title'>"
+        "<span>Historique</span>"
+        "<button class='mob-sheet-close' onclick='mobCloseHist()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg></button>"
+        "</div>"
+        "<div class='mob-snaps-scroll' id='mob-hist-list'></div>"
         "</div></div>"
         "<script>\n" + js_final + "\n</script>"
         "\n</body>\n</html>"

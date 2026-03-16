@@ -739,11 +739,11 @@ html,body{height:100%;background:var(--ink);color:var(--fg);font-family:'Nunito'
 .sb{padding:2px 7px;border-radius:4px;font-size:.55rem;font-weight:700;cursor:pointer;border:1px solid var(--border2);color:var(--fg3);background:transparent;transition:all .12s;font-family:'Nunito',sans-serif}
 .sb.on{background:rgba(86,207,255,.08);color:var(--hi);border-color:rgba(86,207,255,.2)}
 .snap-scroll{overflow-y:auto;flex:1}
-.si{display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.025);transition:background .1s;border-left:3px solid transparent}
+.si{display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.025);transition:background .1s;border-left:3px solid transparent;background:rgba(86,207,255,.04)}
 .si:hover{background:var(--ink3)}
 .si.cur{background:rgba(86,207,255,.07);border-left-color:var(--hi)}
 .si.cur .si-num{color:var(--hi)}
-.si.isnew{border-left-color:var(--red)}
+.si.isnew{border-left-color:var(--red);background:transparent}
 .si.off{display:none}
 .si.playing .si-num::before{content:'▶ ';font-size:.46rem;color:var(--hi);animation:b2 .85s infinite}
 @keyframes b2{0%,100%{opacity:1}50%{opacity:.1}}
@@ -1871,8 +1871,9 @@ function saveSession() {
     PROFS.forEach(function(p){ snap_counts[p] = (ALL[p]||[]).length; });
     var existing = {};
     try { existing = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch(e2){}
-    // Une seule entrée globale : le dernier snap regardé
-    existing['__last__'] = {
+    // Liste de sessions : une par (profil + contexte) combinaison
+    var sessions = existing['__sessions__'] || [];
+    var newEntry = {
       profile:    s.profile,
       snap_index: s.index,
       snap_ts:    s.ts_unix,
@@ -1883,6 +1884,17 @@ function saveSession() {
       ctx_bounds: (qMode==='today' && mobActiveBounds) ? mobActiveBounds : null,
       ctx_label:  (qMode==='today' && mobActiveLabel)  ? mobActiveLabel  : ''
     };
+    // Clé unique : profil + contexte (pour éviter les doublons)
+    var key = newEntry.profile + '|' + (newEntry.ctx_label || 'profile');
+    // Retirer l'ancienne entrée avec la même clé
+    sessions = sessions.filter(function(e) {
+      return (e.profile + '|' + (e.ctx_label || 'profile')) !== key;
+    });
+    // Ajouter en tête
+    sessions.unshift(newEntry);
+    // Garder max 10
+    sessions = sessions.slice(0, 10);
+    existing['__sessions__'] = sessions;
     existing['__counts__'] = snap_counts;
     localStorage.setItem(SESSION_KEY, JSON.stringify(existing));
   } catch(e) {}
@@ -1897,15 +1909,17 @@ function loadSessionForProfile(profile) {
   } catch(e) { return null; }
 }
 
-function clearSessionForProfile(profile) {
+function clearSessionForProfile(profileKey) {
+  // profileKey = "profile|ctx_label" ou juste "profile"
   try {
     var raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return;
     var data = JSON.parse(raw);
-    // Supprimer l'entrée unique si elle concerne ce profil (ou si profile=null = tout supprimer)
-    if (!profile || (data['__last__'] && data['__last__'].profile === profile)) {
-      delete data['__last__'];
-    }
+    var sessions = data['__sessions__'] || [];
+    data['__sessions__'] = sessions.filter(function(e) {
+      var k = e.profile + '|' + (e.ctx_label || 'profile');
+      return k !== profileKey && e.profile !== profileKey;
+    });
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
   } catch(e) {}
 }
@@ -2343,11 +2357,11 @@ function getAllResumeSessions() {
     var raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return [];
     var data = JSON.parse(raw);
-    var last = data['__last__'];
-    if (!last || last.snap_index === undefined) return [];
-    var age = Date.now() - (last.saved_at||0);
-    if (age > 7*86400000) return [];
-    return [{ profile: last.profile, sess: last }];
+    var sessions = data['__sessions__'] || [];
+    var now = Date.now();
+    return sessions
+      .filter(function(e) { return (now-(e.saved_at||0)) < 7*86400000; })
+      .map(function(e) { return { profile: e.profile, sess: e }; });
   } catch(e) { return []; }
 }
 
@@ -2481,18 +2495,20 @@ function mobBuildHist() {
         var delBtn = document.createElement('button');
         delBtn.style.cssText = 'width:28px;height:28px;border-radius:50%;background:var(--ink4);border:1px solid var(--border);color:var(--fg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.7rem';
         delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:12px;height:12px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-        (function(pp) {
+        (function(pp, ss) {
           delBtn.onclick = function(e) {
             e.stopPropagation();
-            clearSessionForProfile(pp);
+            clearSessionForProfile(pp + '|' + (ss.ctx_label || 'profile'));
             mobBuildHist();
           };
-        })(p);
+        })(p, sess);
+        var ctxLabel = (sess.ctx_mode==='today' && sess.ctx_label) ? sess.ctx_label : null;
+        var displayName = ctxLabel ? (ctxLabel + ' — ' + (NAMES[p]||p)) : (NAMES[p]||p);
         el.innerHTML =
           thumbH +
           '<div class="mob-resume-info">'+
-            '<div class="mob-resume-name">'+(NAMES[p]||p)+'</div>'+
-            '<div class="mob-resume-detail">Snap #'+sess.snap_index+(sess.ts_name?' · '+sess.ts_name:'')+'</div>'+
+            '<div class="mob-resume-name">'+displayName+'</div>'+
+            '<div class="mob-resume-detail">'+(sess.ts_name||'')+'</div>'+
           '</div>'+
           '<div style="font-size:.7rem;font-weight:900;color:var(--hi);padding-left:6px;flex-shrink:0">&#8250;</div>';
         el.appendChild(delBtn);

@@ -1,3 +1,12 @@
+"""
+SNAPCHAT MULTI-PROFILE MONITOR & VIEWER v4
+- Fix tri par récent (sort stable par ts_unix)
+- Heure française (Europe/Paris) dans l'affichage
+- Avatar auto-détecté depuis HTML (pattern _RS126,126)
+- Viewer auto-refresh toutes les 15s sans recharger la page
+- Historique avec preview + clic pour jouer
+"""
+
 import urllib.request
 import urllib.error
 import json
@@ -469,9 +478,24 @@ class ProfileState:
 # ─────────────────────────────────────────────
 
 def day_unix_bounds(d: date) -> tuple:
-    start = datetime(d.year, d.month, d.day, 0, 0, 0, tzinfo=timezone.utc)
-    end   = start + timedelta(days=1)
-    return int(start.timestamp()), int(end.timestamp())
+    # Dernier dimanche de mars = début heure été (UTC+2)
+    # Dernier dimanche d'octobre = fin heure été (UTC+1)
+    year = d.year
+    # Dernier dimanche de mars
+    last_sun_mar = date(year, 3, 31)
+    while last_sun_mar.weekday() != 6:
+        last_sun_mar -= timedelta(days=1)
+    # Dernier dimanche d'octobre
+    last_sun_oct = date(year, 10, 31)
+    while last_sun_oct.weekday() != 6:
+        last_sun_oct -= timedelta(days=1)
+    # Offset Paris
+    offset_h = 2 if last_sun_mar <= d < last_sun_oct else 1
+    # minuit Paris = 00:00 locale = (24 - offset) UTC la veille
+    start_utc = datetime(d.year, d.month, d.day, 0, 0, 0) - timedelta(hours=offset_h)
+    start_utc = start_utc.replace(tzinfo=timezone.utc)
+    end_utc   = start_utc + timedelta(days=1)
+    return int(start_utc.timestamp()), int(end_utc.timestamp())
 
 
 # ─────────────────────────────────────────────
@@ -770,7 +794,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
 .tgl-k{position:absolute;top:2px;left:2px;width:11px;height:11px;background:#fff;border-radius:50%;transition:left .16s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .tgl.on .tgl-k{left:15px}
 .viewer-empty{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:rgba(255,255,255,.2);pointer-events:none}
-.viewer-empty-icon{font-size:2.5rem;opacity:.4}
+.viewer-empty-icon{display:none}
 .viewer-empty-txt{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 .snap-stage:fullscreen,
 .snap-stage:-webkit-full-screen{width:100vw;height:100vh;aspect-ratio:unset;max-width:none}
@@ -1127,6 +1151,30 @@ var TODAY_S = __TODAY_STR__;
 var YEST_S  = __YEST_STR__;
 var TODAY_B = __TODAY_BOUNDS__;
 var YEST_B  = __YEST_BOUNDS__;
+// Recalcul TODAY_B/YEST_B en heure Paris cote client (plus precis que serveur)
+(function() {
+  try {
+    function parisMidnightUnix(daysOffset) {
+      var now = new Date();
+      var target = new Date(now.getTime() + (daysOffset||0)*86400000);
+      // Formatter en heure Paris pour extraire la date locale
+      var fmt = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Paris'});
+      var dateStr = fmt.format(target); // YYYY-MM-DD
+      // Minuit Paris = dateStr T 00:00:00 dans la TZ Paris -> convertir en UTC
+      var parisMidnight = new Date(dateStr + 'T00:00:00');
+      // Calculer l offset Paris reel pour ce jour
+      var utcMs = parisMidnight.getTime();
+      var parisMs = new Date(parisMidnight.toLocaleString('en-US', {timeZone:'Europe/Paris'})).getTime();
+      var localMs = parisMidnight.getTime();
+      var offset = parisMs - utcMs;
+      return Math.floor((utcMs - offset) / 1000);
+    }
+    var t0 = parisMidnightUnix(0);
+    TODAY_B = [t0, t0 + 86400];
+    var y0 = parisMidnightUnix(-1);
+    YEST_B  = [y0, y0 + 86400];
+  } catch(e) {}
+})();
 
 /* ── state ── */
 var curProf = null;
@@ -1949,12 +1997,12 @@ playAt = function(i) {
 
 // Filtre jour actif: 'today', 'hier', ou null (profils normaux)
 var mobDayMode = null;
-var mobDayFilterProfs = {}; // profils exclus du filtre jour
-
-var mobDayMode = null;
 var mobDayFilterProfs = {};
 // Filtre catégorie mobile
 var mobCatFilter = 'all';
+// Bounds du jour actif pour filtre influenceur
+var mobActiveBounds = null;
+var mobActiveLabel = '';
 
 function mobBuildProfs() {
   var cont = document.getElementById('mob-prof-list');
@@ -1974,11 +2022,15 @@ function mobBuildProfs() {
     btn.onclick = function() {
       qMode='today'; qi=-1;
       var snaps=[];
+      // Inclure TOUS les profils sans filtre todayExcluded
       PROFS.forEach(function(p){ (ALL[p]||[]).forEach(function(s){ if(inBounds(s,bounds)) snaps.push(s); }); });
       snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
       queue=snaps; filt='all'; srt='chrono'; resetFilterBtns();
       buildSnapList(snaps,true);
       scTitle.textContent=label; scCnt.textContent=snaps.length+' snaps';
+      // Stocker les bounds actives pour le filtre influenceur
+      mobActiveBounds = bounds;
+      mobActiveLabel = label;
       mobCloseProfs();
       setTimeout(function(){ mobTabSnaps(); },80);
     };
@@ -2070,11 +2122,14 @@ function mobTabProfs() {
 }
 
 function mobTabSnaps() {
-  if (!curProf) { mobTabProfs(); return; }
+  if (!curProf && qMode !== 'today') { mobTabProfs(); return; }
   mobSetActiveTab('mob-tab-snaps');
   // Sync titre
   var t = document.getElementById('mob-snaps-title');
-  if (t) t.textContent = (NAMES[curProf]||curProf) + ' — ' + (ALL[curProf]||[]).length + ' snaps';
+  var titleTxt = qMode==='today' ? (mobActiveLabel||"Aujourd'hui") : ((NAMES[curProf]||curProf) + ' — ' + (ALL[curProf]||[]).length + ' snaps');
+  if (t) t.textContent = titleTxt;
+  // Construire le filtre influenceur si mode today/hier
+  buildMobDayFilter();
   // Sync liste
   if (slMob) {
     slMob.innerHTML = slOrig.innerHTML;
@@ -2084,6 +2139,65 @@ function mobTabSnaps() {
   }
   document.getElementById('mob-drawer-profs').classList.remove('open');
   document.getElementById('mob-drawer-snaps').classList.add('open');
+}
+
+// Filtre influenceur pour mode today/hier
+var mobDayProfFilter = {}; // { profile: false } = désactivé
+
+function buildMobDayFilter() {
+  var wrap = document.getElementById('mob-day-filter-wrap');
+  if (!wrap) return;
+  if (qMode !== 'today') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  wrap.innerHTML = '';
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;padding:8px 12px;overflow-x:auto;scrollbar-width:none';
+
+  // Chip "Tous"
+  var allChip = document.createElement('button');
+  allChip.className = 'mob-df-btn' + (Object.keys(mobDayProfFilter).length===0?' on':'');
+  allChip.textContent = 'Tous';
+  allChip.onclick = function() { mobDayProfFilter={}; applyMobDayFilter(); buildMobDayFilter(); };
+  row.appendChild(allChip);
+
+  PROFS.forEach(function(p) {
+    // N'afficher que les profils qui ont des snaps dans le jour actif
+    if (mobActiveBounds) {
+      var hasBound = (ALL[p]||[]).some(function(s){ return inBounds(s, mobActiveBounds); });
+      if (!hasBound) return;
+    }
+    var on = !mobDayProfFilter[p];
+    var chip = document.createElement('button');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;font-size:.62rem;font-weight:800;border:1px solid;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:all .12s;' + (on?'background:rgba(86,207,255,.12);color:var(--hi);border-color:rgba(86,207,255,.3)':'background:transparent;color:var(--fg3);border-color:var(--border2)');
+    chip.innerHTML = '<div style="width:16px;height:16px;border-radius:50%;overflow:hidden;flex-shrink:0">'+avHtml(p)+'</div>'+(NAMES[p]||p);
+    chip.onclick = function() {
+      mobDayProfFilter[p] = on; // toggle
+      applyMobDayFilter();
+      buildMobDayFilter();
+    };
+    row.appendChild(chip);
+  });
+  wrap.appendChild(row);
+}
+
+function applyMobDayFilter() {
+  if (qMode !== 'today' || !mobActiveBounds) return;
+  var snaps = [];
+  PROFS.forEach(function(p) {
+    if (mobDayProfFilter[p]) return;
+    (ALL[p]||[]).forEach(function(s){ if(inBounds(s, mobActiveBounds)) snaps.push(s); });
+  });
+  snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
+  queue = snaps; resetFilterBtns();
+  buildSnapList(snaps, true);
+  var t = document.getElementById('mob-snaps-title');
+  if(t) t.textContent = (mobActiveLabel||'') + ' — ' + snaps.length + ' snaps';
+  if (slMob) {
+    slMob.innerHTML = slOrig.innerHTML;
+    slMob.querySelectorAll('.si').forEach(function(el, i) {
+      el.onclick = function() { playAt(i); mobCloseSnaps(); };
+    });
+  }
 }
 
 function mobTabLB() {
@@ -2466,7 +2580,6 @@ buildProfiles = function() {
         "<button class='arr' id='arr-prev'>&#8249;</button>"
         "<button class='arr' id='arr-next'>&#8250;</button>"
         "<div class='viewer-empty' id='viewer-empty'>"
-        "<div class='viewer-empty-icon'>&#9654;</div>"
         "<div class='viewer-empty-txt'>Choisir un snap</div>"
         "</div>"
         "<div class='autoplay-tog' id='auto-tog'>"
@@ -2479,7 +2592,7 @@ buildProfiles = function() {
         "<nav class='mob-nav' id='mob-nav'>"
         "<button class='mob-tab on' id='mob-tab-home' onclick='mobTabHome()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2'/></svg><span>Viewer</span></button>"
         "<button class='mob-tab' id='mob-tab-profs' onclick='mobTabProfs()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg><span class='mob-badge' id='mob-badge-profs'></span><span>Profils</span></button>"
-        "<button class='mob-tab' id='mob-tab-snaps' onclick='mobTabSnaps()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='8' y1='6' x2='21' y2='6'/><line x1='8' y1='12' x2='21' y2='12'/><line x1='8' y1='18' x2='21' y2='18'/><line x1='3' y1='6' x2='3.01' y2='6'/><line x1='3' y1='12' x2='3.01' y2='12'/><line x1='3' y1='18' x2='3.01' y2='18'/></svg><span>Snaps</span></button>"
+        ""
         "<button class='mob-tab' id='mob-tab-lb' onclick='mobTabLB()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/></svg><span>Classement</span></button><button class='mob-tab' id='mob-tab-hist' onclick='mobTabHist()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg><span>Historique</span></button>"
         "</nav>"
 
@@ -2505,6 +2618,8 @@ buildProfiles = function() {
         "<span id='mob-snaps-title'>Snaps</span>"
         "<button class='mob-sheet-close' onclick='mobCloseSnaps()'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg></button>"
         "</div>"
+        "<div id='mob-day-filter-wrap' style='display:none;border-bottom:1px solid var(--border);flex-shrink:0'></div>"
+        "<div class='mob-day-filter' id='mob-snap-prof-filter' style='display:none'></div>"
         "<div class='mob-filters'>"
         "<button class='sf on' onclick='setFilt(&quot;all&quot;,this)'>Tous</button>"
         "<button class='sf' onclick='setFilt(&quot;v&quot;,this)'>Vidéos</button>"

@@ -739,11 +739,11 @@ html,body{height:100%;background:var(--ink);color:var(--fg);font-family:'Nunito'
 .sb{padding:2px 7px;border-radius:4px;font-size:.55rem;font-weight:700;cursor:pointer;border:1px solid var(--border2);color:var(--fg3);background:transparent;transition:all .12s;font-family:'Nunito',sans-serif}
 .sb.on{background:rgba(86,207,255,.08);color:var(--hi);border-color:rgba(86,207,255,.2)}
 .snap-scroll{overflow-y:auto;flex:1}
-.si{display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.025);transition:background .1s;border-left:3px solid transparent;background:rgba(86,207,255,.04)}
+.si{display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.025);transition:background .1s;border-left:3px solid transparent}.si.seen{background:rgba(86,207,255,.05)}
 .si:hover{background:var(--ink3)}
 .si.cur{background:rgba(86,207,255,.07);border-left-color:var(--hi)}
 .si.cur .si-num{color:var(--hi)}
-.si.isnew{border-left-color:var(--red);background:transparent}
+.si.isnew{border-left-color:var(--red)}
 .si.off{display:none}
 .si.playing .si-num::before{content:'▶ ';font-size:.46rem;color:var(--hi);animation:b2 .85s infinite}
 @keyframes b2{0%,100%{opacity:1}50%{opacity:.1}}
@@ -1452,6 +1452,7 @@ function buildSnapList(snaps, showWho) {
           '<div class="si-ts">' + tsDisplay + '</div>' +
         '</div>';
     }
+    if (isSeen(s.profile, s.index)) el.classList.add('seen');
     el.onclick = function(){ playAt(i); };
     sl.appendChild(el);
   });
@@ -1531,6 +1532,10 @@ function playAt(i) {
   // snap-idx supprimé
 
   saveSession();
+  // Marquer comme vu
+  markSeen(s.profile, s.index);
+  var siEl = document.getElementById('si-' + i);
+  if (siEl) siEl.classList.add('seen');
 
   if (isv) {
     mv.oncanplay = null;
@@ -1660,6 +1665,8 @@ function showToast(profile, idx, type) {
   el.innerHTML='<div class="t-av">'+avHtml(profile)+'</div><div class="t-body"><div class="t-name">'+(NAMES[profile]||profile)+'</div><div class="t-msg">#'+idx+' · '+type+'</div></div>';
   wrap.appendChild(el);
   el.onclick=function(){selProf(profile);if('ontouchstart' in window)mobTabSnaps();else switchTab('profiles');};
+  // Notification navigateur
+  sendBrowserNotif(profile, idx, type);
   // Tab ping animation sur mobile
   if ('ontouchstart' in window) {
     var tab = document.getElementById('mob-tab-profs');
@@ -1757,11 +1764,15 @@ function applyNewData(data) {
     if (lbPane && lbPane.classList.contains('on')) buildLB();
   }
 
-  buildProfiles();
-  var pi = document.getElementById('pi-' + curProf);
-  if (pi) pi.classList.add('on');
+  // Mettre à jour les compteurs sans tout rebuilder
+  if (hadNew) {
+    buildProfiles();
+    var pi = document.getElementById('pi-' + curProf);
+    if (pi) pi.classList.add('on');
+  }
 
-  if (ALL[curProf]) {
+  // Rebuilder la snap list seulement si de nouveaux snaps sont arrivés
+  if (hadNew && ALL[curProf]) {
     var base = qMode === 'today' ? getToday() : (ALL[curProf]||[]);
     var prevSnap = queue[qi];
     buildSnapList(base, qMode !== 'profile');
@@ -1861,6 +1872,19 @@ function buildTodayExclPanel() {
    - Checkbox "ne plus afficher" par profil
    ══════════════════════════════════════════════ */
 var SESSION_KEY    = 'snapmon_session';
+var SEEN_KEY       = 'snapmon_seen';
+var seenSnaps      = {};
+try { seenSnaps = JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); } catch(e){}
+function markSeen(profile, index) {
+  var k = profile + '_' + index;
+  if (!seenSnaps[k]) {
+    seenSnaps[k] = 1;
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(seenSnaps)); } catch(e){}
+  }
+}
+function isSeen(profile, index) {
+  return !!seenSnaps[profile + '_' + index];
+}
 var NO_RESUME_KEY  = 'snapmon_no_resume';  // global boolean
 
 function saveSession() {
@@ -2351,6 +2375,35 @@ var mobNotifEnabled = {};
 try { mobNotifEnabled = JSON.parse(localStorage.getItem('snapmon_notifs')||'{}'); } catch(e){}
 function saveMobNotif() { try{ localStorage.setItem('snapmon_notifs', JSON.stringify(mobNotifEnabled)); }catch(e){} }
 
+// Demander permission notifications navigateur
+function requestBrowserNotif() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') return;
+  Notification.requestPermission().then(function(perm) {
+    if (perm === 'granted') {
+      // Confirmer à l'utilisateur
+      new Notification('Notifications activées', {
+        body: 'Tu recevras les nouveaux snaps en temps réel',
+        icon: ''
+      });
+    }
+  });
+}
+
+function sendBrowserNotif(profile, snapIdx, type) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  if (!mobNotifEnabled[profile]) return;
+  try {
+    new Notification((NAMES[profile]||profile) + ' a posté', {
+      body: type + ' #' + snapIdx,
+      icon: AVATARS[profile] || '',
+      tag:  profile + '-' + snapIdx,
+      renotify: true
+    });
+  } catch(e) {}
+}
+
 // Sessions de reprendre : {profile: {snap_index, preview, ts_name, saved_at}}
 function getAllResumeSessions() {
   try {
@@ -2407,8 +2460,11 @@ function mobBuildHist() {
         '<div class="mob-notif-tgl'+(on?' on':'')+'" id="mob-ntgl-'+p+'" data-p="'+p+'"></div>';
       row.querySelector('.mob-notif-tgl').onclick = function() {
         var pp = this.dataset.p;
-        mobNotifEnabled[pp] = !mobNotifEnabled[pp];
+        var wasOff = !mobNotifEnabled[pp];
+        mobNotifEnabled[pp] = wasOff;
         saveMobNotif();
+        // Demander permission si on active
+        if (wasOff) requestBrowserNotif();
         mobBuildHist();
       };
       body.appendChild(row);

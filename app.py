@@ -750,8 +750,8 @@ html,body{height:100%;background:var(--ink);color:var(--fg);font-family:'Nunito'
 .viewer{flex:1;position:relative;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .viewer-blur{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(28px) brightness(.35) saturate(1.3);transform:scale(1.08);transition:background-image .3s ease;pointer-events:none}
 .snap-stage{position:relative;height:100%;aspect-ratio:9/16;max-width:100%;background:#000;overflow:hidden;border-radius:16px}
-#mv{width:100%;height:100%;object-fit:cover;display:block}
-#mi{width:100%;height:100%;object-fit:cover;display:none}
+#mv{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+#mi{width:100%;height:100%;object-fit:contain;display:none;background:#000}
 .snap-prog{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.18);z-index:20}
 .snap-prog-fill{height:100%;background:#fff;width:0%;transition:width .08s linear}
 .snap-top{position:absolute;top:0;left:0;right:0;z-index:15;padding:14px 14px 10px;background:linear-gradient(180deg,rgba(0,0,0,.6) 0%,transparent 100%);display:flex;align-items:center;gap:9px}
@@ -945,7 +945,7 @@ input.vol-r::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:
     max-width:none!important;
     border-radius:0!important;
   }
-  #mv,#mi{width:100%;height:100%;object-fit:cover}
+  #mv,#mi{width:100%;height:100%;object-fit:contain;background:#000}
 
   /* Barre nav en bas, dans le shell */
   .mob-nav{
@@ -1850,7 +1850,10 @@ function saveSession() {
       snap_ts:    s.ts_unix,
       preview:    s.preview || '',
       ts_name:    s.ts || '',
-      saved_at:   Date.now()
+      saved_at:   Date.now(),
+      ctx_mode:   qMode || 'profile',
+      ctx_bounds: (qMode==='today' && mobActiveBounds) ? mobActiveBounds : null,
+      ctx_label:  (qMode==='today' && mobActiveLabel)  ? mobActiveLabel  : ''
     };
     existing['__counts__'] = snap_counts;
     localStorage.setItem(SESSION_KEY, JSON.stringify(existing));
@@ -2222,28 +2225,63 @@ function mobTabLB() {
   document.getElementById('mob-drawer-lb').classList.add('open');
 }
 
+var mobLBMode = 'alltime'; // 'alltime' ou 'today'
+
 function mobBuildLB() {
   var cont = document.getElementById('mob-lb-list');
   if (!cont) return;
   cont.innerHTML = '';
-  var max = LB.reduce(function(m,r){ return Math.max(m,r[3]); }, 1);
-  LB.forEach(function(r) {
-    var p=r[0],name=r[1],rank=r[2],tot=r[3],vids=r[4],imgs=r[5],nw=r[6];
-    var pct = Math.round(tot/max*100);
+
+  // Onglets
+  var tabs = document.createElement('div');
+  tabs.className = 'mob-hist-tabs';
+  [['Aujourd\'hui','today'],['All time','alltime']].forEach(function(pair) {
+    var label=pair[0], mode=pair[1];
+    var tab = document.createElement('div');
+    tab.className = 'mob-hist-tab' + (mobLBMode===mode?' on':'');
+    tab.textContent = label;
+    tab.onclick = function() { mobLBMode=mode; mobBuildLB(); };
+    tabs.appendChild(tab);
+  });
+  cont.appendChild(tabs);
+
+  // Calculer les données selon le mode
+  var rows;
+  if (mobLBMode === 'today') {
+    // Classer par nombre de snaps aujourd'hui
+    rows = PROFS.map(function(p) {
+      var todaySnaps = (ALL[p]||[]).filter(function(s){ return inBounds(s, TODAY_B); });
+      var vids = todaySnaps.filter(function(s){ return s.type===1; }).length;
+      return { p:p, name:NAMES[p]||p, tot:todaySnaps.length, vids:vids, imgs:todaySnaps.length-vids };
+    }).filter(function(r){ return r.tot>0; })
+      .sort(function(a,b){ return b.tot-a.tot; });
+    if (!rows.length) {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'padding:36px;text-align:center;font-size:.75rem;color:var(--fg3)';
+      empty.textContent = "Aucun snap aujourd'hui";
+      cont.appendChild(empty); return;
+    }
+  } else {
+    rows = LB.map(function(r){ return {p:r[0],name:r[1],tot:r[3],vids:r[4],imgs:r[5],nw:r[6]}; });
+  }
+
+  var max = rows.reduce(function(m,r){ return Math.max(m,r.tot); }, 1);
+  rows.forEach(function(r, i) {
+    var p=r.p, pct=Math.round(r.tot/max*100);
     var el = document.createElement('div');
     el.className = 'lb-item';
     el.style.margin = '4px 12px';
     el.innerHTML =
       '<div class="lb-top">' +
-        '<div class="lb-pos">#'+rank+'</div>' +
+        '<div class="lb-pos">#'+(i+1)+'</div>' +
         '<div class="lb-av">'+avHtml(p)+'</div>' +
-        '<div class="lb-name">'+name+'</div>' +
-        (nw>0?'<div class="lb-new">+'+nw+'</div>':'') +
+        '<div class="lb-name">'+r.name+'</div>' +
+        (r.nw>0?'<div class="lb-new">+'+r.nw+'</div>':'') +
       '</div>' +
       '<div class="lb-grid">' +
-        '<div class="lb-cell"><span class="lb-val">'+tot+'</span><span class="lb-lbl">snaps</span></div>' +
-        '<div class="lb-cell"><span class="lb-val" style="color:var(--hi)">'+vids+'</span><span class="lb-lbl">videos</span></div>' +
-        '<div class="lb-cell"><span class="lb-val" style="color:var(--fg2)">'+imgs+'</span><span class="lb-lbl">images</span></div>' +
+        '<div class="lb-cell"><span class="lb-val">'+r.tot+'</span><span class="lb-lbl">snaps</span></div>' +
+        '<div class="lb-cell"><span class="lb-val" style="color:var(--hi)">'+r.vids+'</span><span class="lb-lbl">videos</span></div>' +
+        '<div class="lb-cell"><span class="lb-val" style="color:var(--fg2)">'+r.imgs+'</span><span class="lb-lbl">images</span></div>' +
       '</div>' +
       '<div class="lb-bar"><div class="lb-fill" style="width:'+pct+'%"></div></div>';
     el.onclick = function(){ selProf(p); document.getElementById('mob-drawer-lb').classList.remove('open'); mobSetActiveTab('mob-tab-home'); };
@@ -2437,11 +2475,29 @@ function mobBuildHist() {
         (function(pp, ss) {
           el.onclick = function() {
             mobCloseHist();
-            selProf(pp);
-            setTimeout(function() {
-              var idx = findSnapInQueue(pp, ss.snap_index);
-              if (idx >= 0) { playAt(idx); mobTabHome(); }
-            }, 100);
+            if (ss.ctx_mode === 'today' && ss.ctx_bounds) {
+              // Restaurer contexte jour
+              qMode = 'today'; qi = -1;
+              mobActiveBounds = ss.ctx_bounds;
+              mobActiveLabel  = ss.ctx_label || '';
+              var snaps = [];
+              PROFS.forEach(function(p2){
+                (ALL[p2]||[]).forEach(function(s2){ if(inBounds(s2, ss.ctx_bounds)) snaps.push(s2); });
+              });
+              snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
+              queue = snaps; filt='all'; srt='chrono'; resetFilterBtns();
+              buildSnapList(snaps, true);
+              setTimeout(function() {
+                var idx = findSnapInQueue(pp, ss.snap_index);
+                if (idx >= 0) { playAt(idx); mobTabHome(); }
+              }, 80);
+            } else {
+              selProf(pp);
+              setTimeout(function() {
+                var idx = findSnapInQueue(pp, ss.snap_index);
+                if (idx >= 0) { playAt(idx); mobTabHome(); }
+              }, 100);
+            }
           };
         })(p, sess);
         body.appendChild(el);

@@ -1421,16 +1421,24 @@ function buildSnapList(snaps, showWho) {
     var isv = s.type === 1;
     var thH = s.preview
       ? '<img class="si-img" src="' + s.preview + '" loading="lazy" alt="">'
-      : '<div class="si-ph">' + (isv ? '🎬' : '🖼') + '</div>';
-    var whoH = showWho ? '<div class="si-who">' + (NAMES[s.profile]||s.profile||'') + '</div>' : '';
+      : '<div class="si-ph">' + (isv ? '&#9654;' : '&#128247;') + '</div>';
     var tsDisplay = s.ts_short || s.ts || '';
-    el.innerHTML = thH +
-      '<div class="si-info">' +
-        '<div class="si-num">#' + s.index + (s.isnew ? '<span class="si-newtag">NEW</span>' : '') + '</div>' +
-        whoH +
-        '<div class="si-type ' + (isv?'v':'i') + '">' + (isv?'VIDEO':'IMAGE') + '</div>' +
-        '<div class="si-ts">' + tsDisplay + '</div>' +
-      '</div>';
+    if (showWho) {
+      // Mode aujourd'hui/hier : nom profil + heure, sans #index ni type
+      el.innerHTML = thH +
+        '<div class="si-info">' +
+          (s.isnew ? '<span class="si-newtag" style="margin-bottom:2px">NEW</span>' : '') +
+          '<div class="si-num" style="font-size:.72rem;color:var(--fg)">' + (NAMES[s.profile]||s.profile||'') + '</div>' +
+          '<div class="si-ts">' + tsDisplay + '</div>' +
+        '</div>';
+    } else {
+      el.innerHTML = thH +
+        '<div class="si-info">' +
+          '<div class="si-num">' + (s.isnew ? '<span class="si-newtag">NEW</span>' : '') + '</div>' +
+          '<div class="si-type ' + (isv?'v':'i') + '">' + (isv?'VIDEO':'IMAGE') + '</div>' +
+          '<div class="si-ts">' + tsDisplay + '</div>' +
+        '</div>';
+    }
     el.onclick = function(){ playAt(i); };
     sl.appendChild(el);
   });
@@ -2349,17 +2357,40 @@ function mobBuildHist() {
             '<div style="font-size:.58rem;color:var(--fg3);font-family:Fira Code,monospace">#'+e.idx+' · '+e.type+'</div>'+
           '</div>'+
           '<div style="font-size:.52rem;color:var(--fg3);font-family:Fira Code,monospace">'+e.ts+'</div>';
-        (function(prof, snapIdx) {
+        (function(prof, snapIdx, snapTs) {
           el.onclick = function() {
             mobCloseHist();
-            // Charger les snaps du profil puis jouer
-            selProf(prof);
-            setTimeout(function() {
-              var idx = findSnapInQueue(prof, snapIdx);
-              if (idx >= 0) { playAt(idx); mobTabHome(); }
-            }, 100);
+            // Déterminer si le snap est dans aujourd'hui ou hier
+            var inToday = snapTs && snapTs >= TODAY_B[0] && snapTs < TODAY_B[1];
+            var inYest  = snapTs && snapTs >= YEST_B[0]  && snapTs < YEST_B[1];
+            if (inToday || inYest) {
+              // Recharger le contexte jour
+              var bounds = inToday ? TODAY_B : YEST_B;
+              var label  = inToday ? "Aujourd'hui" : "Hier";
+              qMode='today'; qi=-1;
+              var snaps=[];
+              PROFS.forEach(function(p){ (ALL[p]||[]).forEach(function(s){ if(inBounds(s,bounds)) snaps.push(s); }); });
+              snaps.sort(function(a,b){ return a.ts_unix-b.ts_unix; });
+              queue=snaps; filt='all'; srt='chrono'; resetFilterBtns();
+              buildSnapList(snaps,true);
+              mobActiveBounds=bounds; mobActiveLabel=label;
+              setTimeout(function() {
+                var idx = findSnapInQueue(prof, snapIdx);
+                if (idx >= 0) { playAt(idx); mobTabHome(); }
+              }, 80);
+            } else {
+              selProf(prof);
+              setTimeout(function() {
+                var idx = findSnapInQueue(prof, snapIdx);
+                if (idx >= 0) { playAt(idx); mobTabHome(); }
+              }, 100);
+            }
           };
-        })(e.profile, e.idx);
+        })(e.profile, e.idx, (function(){
+          // Trouver le ts_unix du snap dans les données
+          var snp = (ALL[e.profile]||[]).find ? (ALL[e.profile]||[]).find(function(s){ return s.index===e.idx; }) : null;
+          return snp ? snp.ts_unix : 0;
+        })());
         body.appendChild(el);
       });
     } else {
